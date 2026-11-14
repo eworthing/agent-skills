@@ -144,6 +144,17 @@ export type ScopeOptions = {
   includeConventions?: boolean
   /** A target classification already computed for host detection. */
   classification?: TargetClassification
+  /** Verify the PR head after capturing the patch. Only --comment needs it. */
+  verifyPrHead?: boolean
+}
+
+/** The PR metadata fields the scope needs, parsed once per discovery. */
+type PrMeta = {
+  files?: Array<{ path?: string }>
+  additions?: number
+  deletions?: number
+  headRefOid?: string
+  url?: string
 }
 
 /**
@@ -388,13 +399,15 @@ function sameDir(a: string, b: string): boolean {
 
 /**
  * Characters the child permission table denies anywhere in a command string
- * (`;`, `|`, `&`, `$`, `<`, `>`, backtick, and control characters). A path
- * containing one cannot be placed in a runnable command: the host matches the
- * raw string, not shell quoting, so the deny rule wins even when the path is
- * single-quoted. The command then omits the pathspec; the embedded diff is
- * still scoped, and the review target tells the agent to stay inside it.
+ * (`;`, `|`, `&`, `$`, `<`, `>`, backtick, and a newline), plus control
+ * characters `renderPath` rewrites. A path containing one cannot be placed in
+ * a runnable command: the host matches the raw string, not shell quoting, so
+ * the deny rule wins even when the path is single-quoted. The command then
+ * omits the pathspec; the embedded diff is still scoped, and the review target
+ * tells the agent to stay inside it. A tab is safe: it is neither denied nor
+ * rewritten, so it stays in the command.
  */
-const SHELL_DENIED = /[;&|$<>`\n\r\t\x00-\x1f\x7f-\x9f\u2028\u2029]/
+const SHELL_DENIED = /[;&|$<>`\n\r\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u2028\u2029]/
 
 /**
  * A shell-ready command the model can re-run visibly. Derive it from the same
@@ -995,6 +1008,7 @@ export function discoverConventions(
   files: string[],
   budget = 20_000,
   home = homedir(),
+  options: { pathsOnly?: boolean } = {},
 ): { paths: string[]; text: string } {
   const dirs = new Set<string>()
   for (const f of files) {
@@ -1035,6 +1049,10 @@ export function discoverConventions(
   const userClaude = join(home, ".claude", "CLAUDE.md")
   if (existsSync(userClaude)) candidates.push(userClaude)
   const paths = uniq(candidates)
+  // A cell without a conventions finder still needs the path list: the prompt
+  // tells finders to read those files when their lens needs them. Skip only
+  // the text reads, not discovery.
+  if (options.pathsOnly) return { paths, text: "" }
   const chunks: string[] = []
   const displayName = (p: string): string => {
     const rel = relative(root, p)
@@ -1369,7 +1387,8 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   let diffBase: string | undefined
   let scopeKind = "worktree"
   let patch: string | undefined
-  let prMeta: ExecResult | undefined
+  /** The final metadata payload, parsed once. */
+  let prMetaJson: PrMeta | undefined
   /** The patch was captured between two matching PR-head reads. */
   let prHeadVerified = false
   let firstFiles: string[] | undefined
@@ -1383,10 +1402,10 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   if (targetPr !== undefined) {
     pr = targetPr
     // The patch and metadata are separate live reads. Fetch metadata, then
-    // the patch, then metadata again; only matching head OIDs prove the patch
-    // belongs to the head that --comment will pin. A push during capture is
-    // retried once, and an unverifiable pair leaves `prHeadOid` unset so
-    // posting refuses instead of attaching old line numbers to a new tree.
+    // the patch, then a head-only read; only matching head OIDs prove the
+    // patch belongs to the head that --comment will pin. The head-only read
+    // avoids downloading the full file list a second time, and a review that
+    // will not post comments skips it entirely.
     const readMeta = () =>
       exec(
         ["gh", "pr", "view", String(pr), "--json", "files,additions,deletions,headRefOid,url"],
@@ -1394,28 +1413,43 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
         callOpts(),
       )
     const readPatch = () => exec(["gh", "pr", "diff", String(pr)], gitCwd, callOpts())
-    const headOf = (result: ExecResult | undefined): string | undefined => {
+    const readHead = () =>
+      exec(["gh", "pr", "view", String(pr), "--json", "headRefOid"], gitCwd, callOpts())
+    const parseMeta = (result: ExecResult | undefined): PrMeta | undefined => {
       if (!result || result.code !== 0) return undefined
       try {
-        const value = JSON.parse(result.stdout) as { headRefOid?: unknown }
-        return typeof value.headRefOid === "string" && value.headRefOid ? value.headRefOid : undefined
+        return JSON.parse(result.stdout) as PrMeta
       } catch {
         return undefined
       }
     }
+    const headOf = (result: ExecResult | undefined): string | undefined => {
+      const value = parseMeta(result)
+      return typeof value?.headRefOid === "string" && value.headRefOid ? value.headRefOid : undefined
+    }
     let meta = await readMeta()
     let gh = await readPatch()
-    let check = await readMeta()
-    const firstHead = headOf(meta)
-    if (firstHead !== undefined && headOf(check) !== undefined && firstHead !== headOf(check)) {
+    let metaJson = parseMeta(meta)
+    const verifyHead = opts.verifyPrHead !== false
+    let check = verifyHead ? await readHead() : undefined
+    let checkHead = headOf(check)
+    const firstHead = typeof metaJson?.headRefOid === "string" ? metaJson.headRefOid : undefined
+    if (verifyHead && firstHead !== undefined && checkHead !== undefined && firstHead !== checkHead) {
       // The head moved while the patch was being fetched; take one fresh pair.
       meta = await readMeta()
       gh = await readPatch()
-      check = await readMeta()
+      metaJson = parseMeta(meta)
+      check = await readHead()
+      checkHead = headOf(check)
     }
-    prMeta = meta
-    const reviewedHead = headOf(meta)
-    prHeadVerified = reviewedHead !== undefined && reviewedHead === headOf(check)
+    prMetaJson = metaJson
+    const reviewedHead = typeof metaJson?.headRefOid === "string" ? metaJson.headRefOid : undefined
+    // A failed trailing check is not proof of a push. Trust the head captured
+    // with the metadata when the check is unavailable; only a successful check
+    // that disagrees with it invalidates the pair.
+    prHeadVerified =
+      reviewedHead !== undefined &&
+      (!verifyHead || checkHead === undefined || checkHead === reviewedHead)
     assertExec(gh, "gh pr diff", timeoutSuffix, "PR diff discovery was cancelled.")
     if (gh.code !== 0) {
       throw new Error(`Could not fetch PR #${pr} with gh: ${gh.stderr.trim() || "gh is unavailable"}`)
@@ -1587,25 +1621,8 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   let diffLines = 0
   if (pr !== undefined) {
     // One metadata call covers the file list and the finder-budget line count.
-    // The PR branch above always sets prMeta; this read never needs a second
-    // `gh pr view`.
-    const meta = prMeta
-    let parsed:
-      | {
-          files?: Array<{ path?: string }>
-          additions?: number
-          deletions?: number
-          headRefOid?: string
-          url?: string
-        }
-      | undefined
-    if (meta?.code === 0) {
-      try {
-        parsed = JSON.parse(meta.stdout) as typeof parsed
-      } catch {
-        parsed = undefined
-      }
-    }
+    // The PR branch above parsed it once; do not re-parse the same payload.
+    const parsed: PrMeta | undefined = prMetaJson
     if (parsed?.files && parsed.files.length > 0) {
       files = parsed.files.map((f) => f.path ?? "").filter(Boolean)
     }
@@ -1741,7 +1758,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       any = true
       counted += numstatTotal(r.stdout)
     }
-    if (any) diffLines = counted
+    if (any) diffLines += counted
   }
 
   const context = buildContextPackage(diffText, root, scopeLabel, uniqueFiles, patchScan?.files)
@@ -1751,11 +1768,14 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       : `${pluralize(uniqueFiles.length, "changed file")} (${scopeLabel}).`
 
   // Nothing to review means nothing to govern: skip the ancestor walk and the
-  // CLAUDE.md/AGENTS.md reads the caller will never render.
+  // CLAUDE.md/AGENTS.md reads the caller will never render. A cell without a
+  // conventions finder still gets the path list; only the text is skipped.
   const conventions =
-    uniqueFiles.length === 0 || opts.includeConventions === false
+    uniqueFiles.length === 0
       ? { paths: [] as string[], text: "" }
-      : discoverConventions(root, uniqueFiles, opts.conventionsBudget)
+      : discoverConventions(root, uniqueFiles, opts.conventionsBudget, undefined, {
+          pathsOnly: opts.includeConventions === false,
+        })
 
   return {
     diffCommand: diffCommands.join(" ; "),

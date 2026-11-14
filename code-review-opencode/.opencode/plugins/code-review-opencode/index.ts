@@ -658,6 +658,9 @@ async function resolveAndRun(
       includeDiffLines: cell.finderBudgetHint,
       // The 2.1.162 recipe has no conventions finder; skip the file reads.
       includeConventions: cell.cleanupLenses !== "162",
+      // Only --comment needs the post-capture head check; a local review does
+      // not use the head and should not pay another gh round trip.
+      verifyPrHead: comment,
       // Host detection already classified this exact target; reuse it so a
       // --comment review does not repeat every branch/remote probe.
       ...(hostClassification && hostTarget?.trim() === parsed.target?.trim()

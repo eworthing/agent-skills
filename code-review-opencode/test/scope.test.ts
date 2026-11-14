@@ -159,6 +159,17 @@ test("a path with a shell metacharacter omits the pathspec from the runnable com
   rmSync(dir, { recursive: true, force: true })
 })
 
+test("a tab in a path stays in the runnable command", async () => {
+  const dir = makeRepo()
+  writeFileSync(join(dir, "a\tb.ts"), "export const tab = 1\n")
+  git(dir, "add", "a\tb.ts")
+  const scope = await resolveScope({ cwd: dir, target: "a\tb.ts" })
+  assert.deepEqual(scope.files, ["a\tb.ts"])
+  assert.doesNotMatch(scope.diffCommand, /pathspec omitted/)
+  assert.ok(scope.diffCommand.includes("a\tb.ts"))
+  rmSync(dir, { recursive: true, force: true })
+})
+
 test("a clean path target records the checked-out branch", async () => {
   const dir = makeRepo()
   const scope = await resolveScope({ cwd: dir, target: "a.ts" })
@@ -367,6 +378,66 @@ test("a PR review downloads the patch once and verifies the head", async () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
+test("a local PR review skips the post-capture head check", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "code-review-pr-nohead-"))
+  mkdirSync(join(dir, ".git"))
+  const calls: string[][] = []
+  const patch = "diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-a\n+b\n"
+  const exec: Exec = async (argv) => {
+    calls.push(argv)
+    if (argv[0] === "git" && argv.includes("rev-parse") && argv.includes("--show-toplevel")) {
+      return { code: 0, stdout: `${dir}\n`, stderr: "" }
+    }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "diff") return { code: 0, stdout: patch, stderr: "" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") {
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          files: [{ path: "src/a.ts" }],
+          headRefOid: "abc123",
+          url: "https://github.com/o/r/pull/42",
+        }),
+        stderr: "",
+      }
+    }
+    return { code: 0, stdout: "", stderr: "" }
+  }
+  const scope = await resolveScope({ cwd: dir, target: "42", exec, verifyPrHead: false })
+  assert.equal(scope.prHeadOid, "abc123")
+  assert.equal(calls.filter((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "view").length, 1)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test("a failed head check still pins the head captured with the patch", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "code-review-pr-headfail-"))
+  mkdirSync(join(dir, ".git"))
+  const patch = "diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-a\n+b\n"
+  const exec: Exec = async (argv) => {
+    if (argv[0] === "git" && argv.includes("rev-parse") && argv.includes("--show-toplevel")) {
+      return { code: 0, stdout: `${dir}\n`, stderr: "" }
+    }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "diff") return { code: 0, stdout: patch, stderr: "" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") {
+      if (argv.includes("headRefOid") && !argv.includes("files,additions,deletions,headRefOid,url")) {
+        return { code: 1, stdout: "", stderr: "rate limited" }
+      }
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          files: [{ path: "src/a.ts" }],
+          headRefOid: "abc123",
+          url: "https://github.com/o/r/pull/42",
+        }),
+        stderr: "",
+      }
+    }
+    return { code: 0, stdout: "", stderr: "" }
+  }
+  const scope = await resolveScope({ cwd: dir, target: "42", exec })
+  assert.equal(scope.prHeadOid, "abc123")
+  rmSync(dir, { recursive: true, force: true })
+})
+
 test("a failed PR metadata call still uses the cached patch", async () => {
   const dir = mkdtempSync(join(tmpdir(), "code-review-pr-fallback-"))
   mkdirSync(join(dir, ".git"))
@@ -443,6 +514,35 @@ test("a fully read conventions file over the character budget carries the trunca
   assert.ok(text.length <= 20_000)
   assert.match(text, /…\(truncated\)$/)
   rmSync(root, { recursive: true, force: true })
+})
+
+test("a partial capture adds failed numstat to the successful patch total", async () => {
+  const dir = makeRepo()
+  git(dir, "checkout", "-b", "feature")
+  writeFileSync(join(dir, "big.ts"), Array.from({ length: 100 }, (_, i) => `export const v${i} = ${i}\n`).join(""))
+  git(dir, "add", "big.ts")
+  git(dir, "commit", "-m", "add big file")
+  writeFileSync(join(dir, "a.ts"), "export const a = 99\nexport const b = 100\n")
+  const exec: Exec = async (argv, cwd, opts) => {
+    if (
+      argv.includes("diff") &&
+      argv.includes("HEAD") &&
+      !argv.includes("main...HEAD") &&
+      !argv.includes("--quiet") &&
+      !argv.includes("--name-status") &&
+      !argv.includes("--numstat")
+    ) {
+      return { code: 1, stdout: "", stderr: "partial capture failed" }
+    }
+    if (argv.includes("--numstat") && argv.includes("HEAD")) {
+      return { code: 0, stdout: "2\t0\ta.ts\n", stderr: "" }
+    }
+    return defaultExec(argv, cwd, opts)
+  }
+  const scope = await resolveScope({ cwd: dir, exec })
+  // 100 lines from the successful range patch + 2 from the failed HEAD entry.
+  assert.equal(scope.diffLines, 102)
+  rmSync(dir, { recursive: true, force: true })
 })
 
 test("a path target outside any repository is an error", async () => {
@@ -544,12 +644,13 @@ test("includeDiffLines false skips the numstat pass", async () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-test("includeConventions false skips the CLAUDE.md reads", async () => {
+test("includeConventions false lists paths but skips the CLAUDE.md text", async () => {
   const dir = makeRepo()
   writeFileSync(join(dir, "CLAUDE.md"), "# root\nRULE_NOT_READ\n")
   writeFileSync(join(dir, "c.ts"), "export const c = 3\n")
+  git(dir, "add", "c.ts")
   const scope = await resolveScope({ cwd: dir, includeConventions: false })
-  assert.deepEqual(scope.claudeMdFiles, [])
+  assert.ok(scope.claudeMdFiles.some((path) => path.endsWith("CLAUDE.md")))
   assert.equal(scope.conventions, "(none noted)")
   rmSync(dir, { recursive: true, force: true })
 })

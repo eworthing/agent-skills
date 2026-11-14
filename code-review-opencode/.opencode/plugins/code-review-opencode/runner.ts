@@ -775,26 +775,26 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
       opts.schemaResults?.delete(id)
       opts.schemaFailures?.delete(id)
       opts.childSessions?.delete(id)
-      if (!keep) {
-        const remove = ctx.session.remove
-        if (remove) {
-          let timer: ReturnType<typeof setTimeout> | undefined
-          try {
-            // Cleanup must not replace the child's captured result. A
-            // synchronous throw is caught here; a host `remove` that never
-            // settles is bounded so it cannot hang every later child call.
-            await Promise.race([
-              Promise.resolve(remove({ sessionID: id })),
-              new Promise<void>((resolve) => {
-                timer = setTimeout(resolve, opts.cleanupTimeoutMs ?? 5_000)
-                timer?.unref?.()
-              }),
-            ])
-          } catch {
-            /* best-effort cleanup */
-          } finally {
-            if (timer) clearTimeout(timer)
-          }
+      if (!keep && typeof ctx.session.remove === "function") {
+        // Call as a method so a host that reads `this` keeps its receiver.
+        // Do not await: removal is cleanup, not part of the child's result,
+        // and a hanging remove must not hold the concurrency slot.
+        let timer: ReturnType<typeof setTimeout> | undefined
+        try {
+          const pending = ctx.session.remove({ sessionID: id })
+          void Promise.race([
+            Promise.resolve(pending),
+            new Promise<void>((resolve) => {
+              timer = setTimeout(resolve, opts.cleanupTimeoutMs ?? 5_000)
+              timer?.unref?.()
+            }),
+          ])
+            .catch(() => {})
+            .finally(() => {
+              if (timer) clearTimeout(timer)
+            })
+        } catch {
+          /* best-effort cleanup */
         }
       }
     }

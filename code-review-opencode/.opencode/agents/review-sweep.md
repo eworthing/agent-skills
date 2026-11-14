@@ -82,6 +82,15 @@ permissions:
   - action: shell
     resource: "* --ext-diff*"
     effect: deny
+  - action: shell
+    resource: "*--config-env*"
+    effect: deny
+  - action: shell
+    resource: "*--paginate*"
+    effect: deny
+  - action: shell
+    resource: "* -O*"
+    effect: deny
 
 ---
 

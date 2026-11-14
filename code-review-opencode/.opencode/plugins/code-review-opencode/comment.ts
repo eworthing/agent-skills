@@ -8,6 +8,7 @@
  */
 import type { EngineResult } from "./engine.ts"
 import type { Scope } from "./scope.ts"
+import { createHash } from "node:crypto"
 import {
   defaultExec,
   diffSideMap,
@@ -109,6 +110,12 @@ export function summaryCommentBody(
     (f) => `- **${renderedLocation(f)}** — ${f.summary}\n\n  ${f.failure_scenario}`,
   )
   return `## Code review findings\n\nThe following findings could not be posted as inline comments:\n\n${entries.join("\n\n")}`
+}
+
+/** Stable hidden marker so a retry does not post a second general comment. */
+export function summaryCommentMarker(body: string): string {
+  const hash = createHash("sha256").update(body).digest("hex").slice(0, 16)
+  return `<!-- code-review-opencode:${hash} -->`
 }
 
 /** Hostname from a PR URL. `gh` keys credentials by hostname, so a port is omitted. */
@@ -403,27 +410,29 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // origin hostname would send the comment request to the wrong instance.
   if (prHost) githubHostname = enterpriseHost(prHost)
   if (!repoName) {
-    // Older gh versions/tests may not return a URL. `gh pr view --json
-    // baseRepository` is not a supported field, so ask the repository that
-    // `gh pr view` resolved the PR against. This is safe here because the
-    // fallback only runs when the PR URL is missing: the PR was resolved from
-    // the current repository (or GH_REPO), not from a cross-repository URL.
-    const base = await call([
-      "gh",
-      "repo",
-      "view",
-      "--json",
-      "nameWithOwner",
-      "--jq",
-      ".nameWithOwner",
-    ])
-    const baseName = base.stdout.trim()
-    if (baseName.includes("/")) {
-      repoName = baseName
+    // Older gh versions/tests may not return a URL. A PR-number review was
+    // resolved against the current repository (or GH_REPO), so `gh repo view`
+    // names the same base repository. A branch review can have resolved an
+    // upstream PR from a fork clone; without the URL there is no way to prove
+    // which repository owns it, so refuse instead of posting to the fork.
+    if (scope.pr === undefined) {
+      repoError = "the PR URL was not returned; pass the PR number as the target"
     } else {
-      // The PR was resolved locally, but gh could not name its repository.
-      // Refuse rather than guess at a different fork or mirror.
-      repoError = base.stderr.trim() || repoError || "could not resolve the PR base repository"
+      const base = await call([
+        "gh",
+        "repo",
+        "view",
+        "--json",
+        "nameWithOwner",
+        "--jq",
+        ".nameWithOwner",
+      ])
+      const baseName = base.stdout.trim()
+      if (baseName.includes("/")) {
+        repoName = baseName
+      } else {
+        repoError = base.stderr.trim() || repoError || "could not resolve the PR base repository"
+      }
     }
   }
   const [owner, name] = repoName.split("/")
@@ -548,19 +557,37 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // duplicated.
   let summary = ""
   if (unposted.length > 0) {
-    const r = await call(
-      buildGitHubSummaryArgs({
-        owner,
-        repo: name,
-        pr,
-        body: summaryCommentBody(unposted),
-        ...(githubHostname ? { hostname: githubHostname } : {}),
-      }),
-    )
-    summary =
-      r.code === 0
-        ? ` Posted the ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline as a general PR comment.`
-        : ` Could not post the ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline as a general PR comment: ${r.stderr.trim() || "gh api failed"}.`
+    const body = summaryCommentBody(unposted)
+    const marker = summaryCommentMarker(body)
+    // A retry after a transient inline failure must not add a second general
+    // comment for the same findings. The marker is hidden in the rendered
+    // comment and stable for the same finding set.
+    const existing = await call([
+      "gh",
+      "api",
+      ...(githubHostname ? ["--hostname", githubHostname] : []),
+      `repos/${owner}/${name}/issues/${pr}/comments`,
+      "--paginate",
+      "--jq",
+      ".[].body",
+    ])
+    if (existing.code === 0 && existing.stdout.includes(marker)) {
+      summary = ` The ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline are already in a general PR comment.`
+    } else {
+      const r = await call(
+        buildGitHubSummaryArgs({
+          owner,
+          repo: name,
+          pr,
+          body: `${body}\n\n${marker}`,
+          ...(githubHostname ? { hostname: githubHostname } : {}),
+        }),
+      )
+      summary =
+        r.code === 0
+          ? ` Posted the ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline as a general PR comment.`
+          : ` Could not post the ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline as a general PR comment: ${r.stderr.trim() || "gh api failed"}.`
+    }
   }
   const failures = outcomes.filter((o) => !o.ok).map((o) => o.message)
   const suffix = failures.length > 0 ? `\n${failures.map((x) => `  - ${x}`).join("\n")}` : ""

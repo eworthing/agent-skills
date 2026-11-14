@@ -4,7 +4,7 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { REVIEW_AGENT_IDS, reviewAgentPermissions } from "../.opencode/plugins/code-review-opencode/agent-policy.ts"
+import { READ_ONLY_POLICY, REVIEW_AGENT_IDS, reviewAgentPermissions } from "../.opencode/plugins/code-review-opencode/agent-policy.ts"
 import {
   BASE_ANGLES,
   CONVENTIONS,
@@ -600,6 +600,22 @@ test("the synth agent prompt matches the runner's schema-tool instruction", () =
   assert.doesNotMatch(agent, /Do not use tools/)
   assert.match(agent, /structured-output tool/)
   assert.match(agent, /final text response/)
+})
+
+test("the Markdown fallback carries every shared shell deny rule", () => {
+  const denies = READ_ONLY_POLICY.filter(
+    (rule) => rule.action === "shell" && rule.effect === "deny",
+  ).map((rule) => rule.resource)
+  const agents = fileURLToPath(new URL("../.opencode/agents/", import.meta.url))
+  for (const file of ["review-finder.md", "review-verifier.md", "review-sweep.md"]) {
+    const text = readFileSync(join(agents, file), "utf8")
+    const resources = [...text.matchAll(/resource: "([^"]+)"/g)].map((match) =>
+      match[1].replaceAll("\\n", "\n"),
+    )
+    for (const deny of denies) {
+      assert.ok(resources.includes(deny), `${file} is missing the shared deny rule ${deny}`)
+    }
+  }
 })
 
 test("the three review agents share one read-only policy module", () => {

@@ -364,9 +364,10 @@ function applyIndexPlan<T, R>(
   let truncated = false
   // A zero-based plan may name index 0, but a valid plan may also be a subset
   // that omits it (the synthesis prompt asks for the most severe findings when
-  // survivors exceed the cap). Treat the plan as 0-based unless its largest
-  // index lands exactly at `items.length`: that is the signature of a 1-based
-  // full plan and is unambiguous because a 0-based plan can never reach n.
+  // survivors exceed the cap). Treat the plan as 0-based unless it covers
+  // every item exactly once as 1..n: that is the only unambiguous signature of
+  // a 1-based full plan. A single out-of-range index (an off-by-one) must not
+  // flip an otherwise zero-based plan.
   //
   // A contiguous subset that happens to start at 1 is ambiguous. The prompts
   // number every candidate from 0, so a compliant zero-based subset must not
@@ -374,8 +375,11 @@ function applyIndexPlan<T, R>(
   // reinterpret; a 1-based partial plan is a protocol violation and is
   // backfilled as zero-based instead of silently reporting the wrong entries.
   const hasZero = decisions.some((d) => d.index === 0 || d.merge.includes(0))
-  const maxIndex = decisions.reduce((max, d) => Math.max(max, d.index, ...d.merge), -1)
-  const oneBased = !hasZero && maxIndex === items.length
+  const unique = [...new Set(decisions.flatMap((d) => [d.index, ...d.merge]))].sort((a, b) => a - b)
+  const oneBased =
+    !hasZero &&
+    unique.length === items.length &&
+    unique.every((value, i) => value === i + 1)
   const plan = oneBased
     ? decisions.map((d) => ({ ...d, index: d.index - 1, merge: d.merge.map((i) => i - 1) }))
     : decisions
@@ -927,9 +931,11 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   let sweepGaps = 0
 
   if (cell.streaming) {
-    // v2.1.162: no barrier. Each finder's candidates are deduped against the
-    // shared `seen` map and verified immediately, while other finders run.
-    const seen = new Set<string>()
+    // v2.1.162: no barrier. Each finder dedupes its own candidates and starts
+    // verifying immediately; cross-finder duplicates are grouped after all
+    // finders return, keeping the lowest finder index as the representative.
+    // This preserves the streaming overlap without letting child latency pick
+    // the representative.
     // Reserve a per-finder share of the budget. A single shared counter let
     // whichever finder finished first consume every slot, so two runs of the
     // same commit verified different candidates. A deterministic quota makes
@@ -947,19 +953,13 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       )
       partial = true
     }
-    // Dedup in finder order even when the children finish out of order. The
-    // shared `seen` set must not let latency decide which duplicate becomes
-    // the representative; a later finder's result waits until every earlier
-    // finder has flushed. Verification still overlaps the remaining finders.
-    const pending = new Map<number, RawFinding[]>()
-    const verifications: Array<Promise<void>> = []
-    let nextFinder = 0
-    const flush = (): void => {
-      while (pending.has(nextFinder)) {
-        const finder = finders[nextFinder]
-        const candidates = pending.get(nextFinder) ?? []
-        pending.delete(nextFinder)
-        let verifySlots = share + (nextFinder < remainder ? 1 : 0)
+    const verifiedByFinder: Finding[][] = finders.map(() => [])
+    await Promise.all(
+      finders.map(async (f, finderIndex) => {
+        let verifySlots = share + (finderIndex < remainder ? 1 : 0)
+        const candidates = await runFinder(f)
+        stats.candidates += candidates.length
+        const seen = new Set<string>()
         const deduped = dedupeBy(candidates, dedupKey162, seen, () => {
           if (verifySlots <= 0) {
             warnBudget()
@@ -969,24 +969,17 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           return true
         })
         stats.dupes += deduped.dupes
-        const novel = deduped.novel.map((c) => ({ ...c, kind: kindFor(finder, c) }))
-        verifications.push(
-          mapLimit(novel, concurrency, (c) => verifyOne(c, c.kind)).then((results) => {
-            verified.push(...results.filter((x): x is Finding => x !== null))
-          }),
-        )
-        nextFinder++
-      }
-    }
-    await Promise.all(
-      finders.map(async (f, finderIndex) => {
-        const candidates = await runFinder(f)
-        stats.candidates += candidates.length
-        pending.set(finderIndex, candidates)
-        flush()
+        const novel = deduped.novel.map((c) => ({ ...c, kind: kindFor(f, c) }))
+        const results = await mapLimit(novel, concurrency, (c) => verifyOne(c, c.kind))
+        verifiedByFinder[finderIndex] = results
+          .filter((x): x is Finding => x !== null)
+          .sort(compareFindings)
       }),
     )
-    await Promise.all(verifications)
+    const streamed = verifiedByFinder.flat()
+    const deduped = dedupeBy(streamed, dedupKey162)
+    stats.dupes += deduped.dupes
+    verified = deduped.novel
   } else {
     const finderOutputs = await mapLimit(finders, concurrency, async (f) => ({ finder: f, candidates: await runFinder(f) }))
     for (const o of finderOutputs) stats.candidates += o.candidates.length
@@ -1436,10 +1429,11 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           truncatedByCap = report.truncated === true || (cap !== undefined && emitted.length > cap)
           if (report.truncated === true) {
             // The normalizer cut the re-emitted tail, so the synthesizer's
-            // pre-cap count is unknown. The verified survivor count is the
-            // only known upper bound; using the already-truncated length would
-            // understate the cut (for example "5 of 6" when 20 survived).
-            truncatedFrom = Math.max(truncatedFrom ?? 0, ranked.length, emitted.length + 1)
+            // pre-cap count is unknown. Count only findings that actually had
+            // a verdict: sweep gaps were never independently verified, and the
+            // renderer must not call them "verified findings".
+            const verifiedCount = Math.max(0, ranked.length - sweepGaps)
+            truncatedFrom = Math.max(truncatedFrom ?? 0, verifiedCount, emitted.length + 1)
             warnings.push("synthesis report was truncated at the tool cap; the pre-cap count is a lower bound")
           } else if (cap !== undefined && emitted.length > cap) {
             truncatedFrom = emitted.length

@@ -1028,6 +1028,30 @@ test("v2.1.162 dedupes in finder order even when a later finder finishes first",
   assert.equal(aFirst[0]?.failure_scenario, "first scenario")
 })
 
+test("v2.1.162 verifies a later finder before an earlier slow finder returns", async () => {
+  const { calls } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "high",
+    script: {
+      delay: (req) => (req.role === "finder" && req.label === "angle-A" ? 120 : 0),
+      finder: (req) =>
+        req.label === "angle-A"
+          ? { candidates: [candidate("src/a.ts", 1, "a bug")] }
+          : req.label === "angle-B"
+            ? { candidates: [candidate("src/b.ts", 2, "b bug")] }
+            : { candidates: [] },
+      verifier: () => CONFIRMED(),
+    },
+  })
+  const verifyB = calls.find((c) => c.role === "verifier" && c.prompt.includes("b bug"))
+  const finderA = calls.find((c) => c.role === "finder" && c.label === "angle-A")
+  assert.ok(verifyB && finderA)
+  assert.ok(
+    verifyB.at < finderA.at + 120,
+    "verification of angle-B should start before the slow angle-A finishes",
+  )
+})
+
 /* 22 */ test("v2.1.318 waits at a barrier before verifying", async () => {
   const { calls } = await review({
     version: "cc-2.1.318",
@@ -1739,13 +1763,45 @@ test("a truncated text-synthesis report uses the verified survivor count", async
         return { candidates: found ? [found] : [] }
       },
       verifier: () => CONFIRMED(),
-      sweep: () => ({ candidates: [] }),
+      sweep: () => ({ candidates: [candidate("src/e.ts", 5, "sweep-only gap")] }),
       synthesize: () => ({ summary: "text report", findings: [a, b, c], truncated: true }),
     },
   })
-  // Three findings were re-emitted and the normalizer cut them to two. The
-  // report must not claim the pre-cap count was three when four survived.
+  // Three findings were re-emitted and the normalizer cut them to two. Four
+  // entries had verdicts; the fifth is a sweep gap and must not be counted as
+  // a verified finding in the "Showing X of Y" notice.
   assert.equal(result.truncatedFrom, 4)
+})
+
+test("an out-of-range index does not flip a zero-based plan to 1-based", async () => {
+  const items = ["zero", "one", "two", "three", "four", "five"].map((s, i) =>
+    candidate("src/a.ts", i + 1, `${s} bug`),
+  )
+  const labels = ["angle-A", "angle-B", "angle-C", "reuse", "simplification", "efficiency"]
+  const { result } = await review({
+    semanticMerge: true,
+    limit: 6,
+    script: {
+      finder: (req) => {
+        const index = labels.indexOf(req.label)
+        return index >= 0 ? { candidates: [items[index]] } : { candidates: [] }
+      },
+      verifier: () => CONFIRMED(),
+      synthesize: (req) =>
+        req.label === "dedup"
+          ? { summary: "deduped", decisions: items.map((_, i) => ({ index: i })) }
+          : {
+              summary: "ranked",
+              decisions: [
+                { index: 1, merge: [2] },
+                // The off-by-one out-of-range merge must not turn the whole
+                // plan into a 1-based plan.
+                { index: 4, merge: [6] },
+              ],
+            },
+    },
+  })
+  assert.match(result.findings[0].summary, /^one bug/)
 })
 
 test("a 1-based synthesis plan is shifted before ranking", async () => {

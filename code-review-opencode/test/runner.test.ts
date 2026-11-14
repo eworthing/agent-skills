@@ -28,6 +28,7 @@ function fakeCtx(
     interruptThrows?: boolean
     removeThrows?: boolean
     removeHangs?: boolean
+    requireRemoveReceiver?: boolean
   } = {},
 ) {
   let next = 0
@@ -81,6 +82,7 @@ function fakeCtx(
       if (opts.interruptThrows) throw new Error("session already removed")
     },
     async remove(input: { sessionID: string }) {
+      if (opts.requireRemoveReceiver && this !== session) throw new Error("lost receiver")
       removed.push(input.sessionID)
       if (opts.removeThrows) throw new Error("session already removed")
       if (opts.removeHangs) return new Promise<void>(() => {})
@@ -170,6 +172,17 @@ test("a captured schema result wins over assistant text", async () => {
 
 test("a synchronous session.remove failure keeps the captured result", async () => {
   const fake = fakeCtx({}, { removeThrows: true })
+  fake.setOnPrompt((id) =>
+    fake.push(id, '{"candidates":[{"file":"a.ts","summary":"s","failure_scenario":"f"}]}'),
+  )
+  const runner = makeRunner(fake.ctx, { parentSessionID: "ses_parent" })
+  const value = (await runner(request())) as { candidates: unknown[] }
+  assert.equal(value.candidates.length, 1)
+  assert.deepEqual(fake.removed, ["ses_1"])
+})
+
+test("session.remove keeps its receiver", async () => {
+  const fake = fakeCtx({}, { requireRemoveReceiver: true })
   fake.setOnPrompt((id) =>
     fake.push(id, '{"candidates":[{"file":"a.ts","summary":"s","failure_scenario":"f"}]}'),
   )

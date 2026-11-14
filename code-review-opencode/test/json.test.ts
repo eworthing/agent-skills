@@ -23,6 +23,46 @@ test("every generated schema example is detected as an echo", () => {
   }
 })
 
+test("a filled-in example that kept the sentinel is a real result", () => {
+  const filled = {
+    __example: true,
+    candidates: [
+      {
+        file: "src/real.ts",
+        line: 7,
+        summary: "the guard is inverted",
+        failure_scenario: "a negative input reaches the branch and throws",
+      },
+    ],
+  }
+  assert.equal(isSchemaEcho(filled), false)
+  // Two distinctive placeholders are still an echo even without the sentinel.
+  assert.equal(
+    isSchemaEcho({
+      candidates: [
+        {
+          file: "path/to/file.ts",
+          summary: "one sentence",
+          failure_scenario: "a real scenario",
+        },
+      ],
+    }),
+    true,
+  )
+})
+
+test("real grouped verdicts are not mistaken for an example echo", () => {
+  assert.equal(
+    isSchemaEcho({
+      verdicts: [
+        { index: 0, verdict: "CONFIRMED", evidence: "line 4 guards the call" },
+        { index: 1, verdict: "CONFIRMED", evidence: "line 9 guards the call" },
+      ],
+    }),
+    false,
+  )
+})
+
 test("extractJson prefers a JSON fence over an earlier code fence", () => {
   const text =
     'the guard is here:\n```ts\nconst re = /[a-z/\n```\n```json\n[{"file":"a.ts"}]\n```'
@@ -420,7 +460,7 @@ test("extractJson keeps a real payload that precedes an echoed schema example", 
   assert.equal(parsed.candidates[0].file, "real.ts")
 })
 
-test("asGroupVerdicts shifts 1-based lists, including partial ones, but not after index 0 was dropped", () => {
+test("asGroupVerdicts shifts full 1-based lists but keeps ambiguous partial lists as-is", () => {
   const offset = asGroupVerdicts(
     {
       verdicts: [
@@ -445,11 +485,11 @@ test("asGroupVerdicts shifts 1-based lists, including partial ones, but not afte
     },
     3,
   )
-  // A partial list that starts at 1 and never exceeds the group size is a
-  // 1-based answer. Shift it instead of discarding the confirmed verdicts.
+  // A partial list starting at 1 is ambiguous. Keep it as-is: a 1-based
+  // partial answer must not be shifted onto the never-examined candidate 0.
   assert.deepEqual(partial, [
-    { index: 0, verdict: "CONFIRMED", evidence: "e1" },
-    { index: 1, verdict: "CONFIRMED", evidence: "e2" },
+    { index: 1, verdict: "CONFIRMED", evidence: "e1" },
+    { index: 2, verdict: "CONFIRMED", evidence: "e2" },
   ])
   // If index 0 was submitted and dropped (invalid verdict), the survivors are
   // zero-based and must not shift onto the wrong candidates.

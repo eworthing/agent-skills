@@ -11,6 +11,7 @@ import {
   resolvePrInfo,
   samePrBase,
   summaryCommentBody,
+  summaryCommentMarker,
 } from "../.opencode/plugins/code-review-opencode/comment.ts"
 import type { Exec, ExecOptions } from "../.opencode/plugins/code-review-opencode/scope.ts"
 import { engineFinding, engineResult, scopeOf } from "./helpers.ts"
@@ -188,7 +189,7 @@ test("a finding without a positive line is posted as a general comment", async (
   assert.match(text, /Posted 0\/1/)
   assert.match(text, /no line to anchor/)
   assert.match(text, /Posted the 1 finding that could not be posted inline as a general PR comment/)
-  const summary = calls.find((c) => c.some((a) => a.includes("/issues/9/comments")))
+  const summary = calls.find((c) => c.some((a) => a.includes("/issues/9/comments")) && c.some((a) => a.startsWith("body=")))
   assert.ok(summary)
   assert.ok(summary.some((a) => a.startsWith("body=") && a.includes("missing await")))
 })
@@ -213,11 +214,29 @@ test("an inline failure is reposted as one general PR comment", async () => {
   const text = await postComments({ cwd: "/repo", scope, result: result(findings), exec })
   assert.match(text, /Posted 0\/2 inline GitHub PR comments\./)
   assert.match(text, /Posted the 2 findings that could not be posted inline as a general PR comment/)
-  const summary = calls.find((c) => c.some((a) => a.includes("/issues/9/comments")))
+  const summary = calls.find((c) => c.some((a) => a.includes("/issues/9/comments")) && c.some((a) => a.startsWith("body=")))
   assert.ok(summary)
   const body = summary.find((a) => a.startsWith("body=")) ?? ""
   assert.match(body, /src\/a\.ts:4/)
   assert.match(body, /src\/b\.ts:8/)
+})
+
+test("an existing general comment is not reposted", async () => {
+  const findings = [finding({ line: 0 })]
+  const marker = summaryCommentMarker(summaryCommentBody(findings))
+  const scope = scopeOf(["src/a.ts"], { pr: 9 })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
+    if (argv[0] === "gh" && argv[1] === "api") {
+      if (argv.includes("--paginate")) return { stdout: `${marker}\n` }
+      return { code: 0 }
+    }
+    return { code: 1 }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(findings), exec })
+  assert.match(text, /already in a general PR comment/)
+  assert.equal(calls.some((c) => c.some((a) => a.startsWith("body="))), false)
 })
 
 test("the general comment names every unposted finding", () => {
@@ -475,6 +494,31 @@ test("a PR-number review posts when the local origin is not GitHub", async () =>
   assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
   // The captured PR URL is authoritative; no origin probe is needed.
   assert.equal(calls.some((c) => c[0] === "git" && c[1] === "remote"), false)
+})
+
+test("a branch review with no PR URL refuses instead of guessing the repository", async () => {
+  const scope = scopeOf(["src/a.ts"], { branch: "feature", diffBase: "main" })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
+    if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
+    if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
+      return { stdout: JSON.stringify({ number: 9 }) }
+    }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") {
+      if (argv.includes("url")) return { stdout: "" }
+      if (argv.includes("headRefOid")) return { stdout: "abc\n" }
+      if (argv.includes("baseRefName")) return { stdout: "main\n" }
+      if (argv.includes("baseRefOid")) return { stdout: "base123\n" }
+    }
+    if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/fork\n" }
+    if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /the PR URL was not returned/)
+  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "repo"), false)
 })
 
 test("a PR-number review refuses to post without a captured head", async () => {

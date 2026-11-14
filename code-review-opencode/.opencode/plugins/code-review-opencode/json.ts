@@ -171,20 +171,41 @@ function balancedAt(body: string, start: number): { end: number; parsed: unknown
 
 const RESULT_KEY = new RegExp(RESULT_KEY_PATTERN, "g")
 
+/** Distinctive placeholder strings; enum-like values such as CONFIRMED are excluded. */
+const SAMPLE_PLACEHOLDERS = new Set(
+  [SAMPLE_VALUE.file, SAMPLE_VALUE.summary, SAMPLE_VALUE.failure_scenario, SAMPLE_VALUE.evidence].filter(
+    (value): value is string => typeof value === "string",
+  ),
+)
+
+function countSamplePlaceholders(value: unknown): number {
+  if (typeof value === "string") return SAMPLE_PLACEHOLDERS.has(value) ? 1 : 0
+  if (Array.isArray(value)) {
+    return value.reduce((count, item) => count + countSamplePlaceholders(item), 0)
+  }
+  if (isRecord(value)) {
+    return Object.values(value).reduce((count, item) => count + countSamplePlaceholders(item), 0)
+  }
+  return 0
+}
+
 /**
  * The prompt's `Expected shape:` example is a valid result object, so a model
  * that repeats it after its real payload must not replace that payload.
  * Recognize the generated placeholder values rather than preferring the first
  * or last result-shaped object unconditionally: the example may be quoted
  * before or after the answer.
+ *
+ * The sentinel alone is not enough: a model may edit the template and keep
+ * `__example`, so a payload is an echo only while at least one distinctive
+ * placeholder remains. A fully filled-in answer that kept the sentinel is a
+ * real result.
  */
 export function isSchemaEcho(value: unknown): boolean {
   if (!isRecord(value)) return false
-  // Every generated example carries this sentinel, so a new result kind is
-  // covered without adding another placeholder branch below.
-  if (value.__example === true) return true
-  // The decisions example has no finding placeholders, so the per-item check
-  // below cannot see it. Match the generated example exactly.
+  // The decisions and grouped-verdict examples carry only one distinctive
+  // placeholder each, so match their exact generated structure. These checks
+  // do not fire on a filled-in answer because the placeholder fields change.
   if (
     value.summary === SAMPLE_VALUE.summary &&
     Array.isArray(value.decisions) &&
@@ -197,8 +218,6 @@ export function isSchemaEcho(value: unknown): boolean {
   ) {
     return true
   }
-  // The grouped-verdict example keeps `verdict` inside the array rather than
-  // at the top level, so the top-level check below misses it too.
   if (
     Array.isArray(value.verdicts) &&
     value.verdicts.length === 1 &&
@@ -209,28 +228,8 @@ export function isSchemaEcho(value: unknown): boolean {
   ) {
     return true
   }
-  for (const key of RESULT_ARRAY_KEYS) {
-    const items = value[key]
-    if (!Array.isArray(items) || items.length === 0) continue
-    if (
-      items.every((item) => {
-        if (!isRecord(item)) return false
-        // The generated example carries all three placeholder fields. Requiring
-        // all three avoids accepting a lightly edited copy as a real answer;
-        // a real finding in a repository that happens to contain
-        // `path/to/file.ts` will not also carry the sample summary and
-        // failure scenario.
-        return (
-          item.file === SAMPLE_VALUE.file &&
-          item.summary === SAMPLE_VALUE.summary &&
-          item.failure_scenario === SAMPLE_VALUE.failure_scenario
-        )
-      })
-    ) {
-      return true
-    }
-  }
-  return typeof value.verdict === "string" && value.evidence === SAMPLE_VALUE.evidence
+  const placeholders = countSamplePlaceholders(value)
+  return placeholders >= 2 || (value.__example === true && placeholders >= 1)
 }
 
 /**
@@ -525,24 +524,21 @@ export function asGroupVerdicts(
   })
   if (!parsed.ok) return null
   // A text fallback cannot re-prompt the child. Keep partial verdicts instead
-  // of discarding the whole group, and shift a contiguous 1-based list so the
-  // verdicts still map to candidates [0..n-1]. A non-contiguous list is kept
-  // as-is; the engine drops the missing indices and warns.
-  // Shift before filtering: a 1-based list ending at `count` has an index
-  // equal to the group size, which a pre-shift range filter would discard.
+  // of discarding the whole group. Only a complete 1-based list is shifted;
+  // an ambiguous partial list is kept as-is and the engine drops the missing
+  // candidate with a warning.
   const raw = parsed.value.verdicts
   const sorted = [...raw].sort((a, b) => a.index - b.index)
-  // A list that starts at 1 and never exceeds the group size is a 1-based
-  // answer, whether it covers every candidate or only a subset. A list with
-  // index 0 is zero-based, and a list whose index 0 was submitted but dropped
-  // for a malformed field is still zero-based. Shift before filtering: a
-  // 1-based list ending at `count` has an index equal to the group size, which
-  // a pre-shift range filter would discard.
+  // Only a complete 1-based list (indices 1..count) is unambiguous: a
+  // zero-based full list has index 0, and a zero-based subset can never reach
+  // `count`. A partial list starting at 1 could be either a 1-based subset or
+  // a zero-based subset that omitted 0; the prompt numbers candidates from 0,
+  // so keep it as-is and let the engine drop the missing candidate with a
+  // warning instead of attaching verdicts to the wrong findings.
   const oneBased =
     parsed.value.zeroDropped !== true &&
-    sorted.length > 0 &&
-    sorted[0].index === 1 &&
-    sorted.every((v) => v.index <= count)
+    sorted.length === count &&
+    sorted.every((v, i) => v.index === i + 1)
   const shifted = oneBased
     ? sorted.map((v) => ({ ...v, index: v.index - 1 }))
     : raw
