@@ -17,7 +17,6 @@ import {
   parseStructured,
   resolveConcurrency,
   resolveEffort,
-  hardLimitApplies,
   resolveMaxFindings,
   promptLimit,
   storedMaxFindings,
@@ -197,11 +196,8 @@ test("max-findings: the 32 cap applies to the engine/fork path and ReportFinding
   assert.equal(resolveMaxFindings(parseArgs("high --max-findings 50"), cell, false).stated, 50)
   assert.equal(resolveMaxFindings(parseArgs("high --max-findings all"), cell, true).stated, 32)
   assert.equal(resolveMaxFindings(parseArgs("high --max-findings all"), cell, false).stated, "all")
-  // The call site passes `usesEngine || hasReportFindings`; --json still uses
-  // the engine, so it must keep the reference's 32-finding ceiling.
-  assert.equal(hardLimitApplies(true, false), true)
-  assert.equal(hardLimitApplies(false, true), true)
-  assert.equal(hardLimitApplies(false, false), false)
+  // The call site passes `usesEngine || kind === "reportfindings"`; --json
+  // still uses the engine, so it keeps the reference's 32-finding ceiling.
   assert.equal(promptLimit(cell, undefined), 10)
 })
 

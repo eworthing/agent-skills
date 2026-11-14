@@ -1,14 +1,16 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { AGENT_IDS } from "../.opencode/plugins/code-review-opencode/agent-ids.ts"
 import {
   READ_ONLY_POLICY,
   REVIEW_AGENT_IDS,
   installReviewAgentPolicy,
   renderAgentPolicyYaml,
+  replacePolicyBlock,
   reviewAgentPermissions,
 } from "../.opencode/plugins/code-review-opencode/agent-policy.ts"
 import { GIT_HARDENING } from "../.opencode/plugins/code-review-opencode/scope.ts"
@@ -74,6 +76,7 @@ test("installReviewAgentPolicy replaces governed rules and keeps host extensions
         permissions: [
           { action: "shell", resource: "git -c core.hooksPath=/old diff*", effect: "allow" as const },
           { action: "webfetch", resource: "https://example.com/*", effect: "allow" as const },
+          { action: "edit", resource: "*", effect: "allow" as const },
           { action: "*", resource: "*", effect: "ask" as const },
           { action: "*", resource: "/tmp/*", effect: "allow" as const },
         ],
@@ -109,6 +112,11 @@ test("installReviewAgentPolicy replaces governed rules and keeps host extensions
       false,
       `${id} kept a broad host allow that would bypass the deny-all`,
     )
+    assert.equal(
+      permissions.some((rule) => rule.action === "edit" && rule.effect === "allow"),
+      false,
+      `${id} kept a write-capable host allow`,
+    )
     assert.ok(
       permissions.some(
         (rule) =>
@@ -142,9 +150,24 @@ test("installReviewAgentPolicy is a no-op on hosts without agent transforms", as
   await installReviewAgentPolicy({})
 })
 
+test("every agent id names a Markdown agent file", () => {
+  const dir = fileURLToPath(new URL("../.opencode/agents/", import.meta.url))
+  for (const id of Object.values(AGENT_IDS)) {
+    assert.ok(existsSync(join(dir, `${id}.md`)), `${id}.md is missing`)
+  }
+})
+
 test("the agent-policy sync check passes", () => {
   const script = fileURLToPath(new URL("../scripts/sync-agent-policy.ts", import.meta.url))
   execFileSync(process.execPath, [script, "--check"], { stdio: "pipe" })
+})
+
+test("the policy block replacement writes dollar patterns verbatim", () => {
+  const text = "---\npermissions:\n  - action: old\n---\nbody\n"
+  const block = 'permissions:\n  - action: "shell"\n    resource: "*$(*"\n    effect: deny'
+  const next = replacePolicyBlock(text, block)
+  assert.ok(next.includes('"*$(*"'))
+  assert.ok(next.includes("body"))
 })
 
 test("the Markdown fallback permissions are generated from the shared policy", () => {

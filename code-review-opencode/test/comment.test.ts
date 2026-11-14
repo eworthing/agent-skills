@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import {
   buildGitHubCommentArgs,
   buildGitHubSummaryArgs,
+  commentBody,
   detectHostDetails,
   hostFromRemote,
   isGitHubRemote,
@@ -16,7 +17,15 @@ import {
 import type { Exec, ExecOptions } from "../.opencode/plugins/code-review-opencode/scope.ts"
 import { engineFinding, engineResult, scopeOf } from "./helpers.ts"
 
-type Reply = { code?: number; stdout?: string; stderr?: string; delay?: number; active?: boolean }
+type Reply = {
+  code?: number
+  stdout?: string
+  stderr?: string
+  delay?: number
+  active?: boolean
+  timedOut?: boolean
+  aborted?: boolean
+}
 
 function fake(script: (argv: string[]) => Reply) {
   const calls: string[][] = []
@@ -48,7 +57,13 @@ function fake(script: (argv: string[]) => Reply) {
     }
     if (r.delay) await new Promise((resolve) => setTimeout(resolve, r.delay))
     if (r.active) active--
-    return { code: r.code ?? 0, stdout: r.stdout ?? "", stderr: r.stderr ?? "" }
+    return {
+      code: r.code ?? 0,
+      stdout: r.stdout ?? "",
+      stderr: r.stderr ?? "",
+      ...(r.timedOut ? { timedOut: true } : {}),
+      ...(r.aborted ? { aborted: true } : {}),
+    }
   }
   return { exec, calls, opts, maxActive: () => maxActive }
 }
@@ -205,6 +220,9 @@ test("an inline failure is reposted as one general PR comment", async () => {
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app" }
     if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") {
+      // Both existing-comment scans succeed with no markers; the inline posts
+      // on the pulls endpoint fail, and the general post succeeds.
+      if (argv.includes("--paginate")) return { code: 0 }
       return argv.some((a) => a.includes("/issues/9/comments"))
         ? { code: 0 }
         : { code: 1, stderr: "422 Unprocessable Entity" }
@@ -305,6 +323,75 @@ test("a finding missing from the existing general comment is posted", async () =
   assert.doesNotMatch(body, /third finding/)
   assert.ok(body.includes(findingMarker(a)))
   assert.ok(body.includes(findingMarker(b)))
+})
+
+test("the finding marker is stable across the also-at suffix and punctuation", () => {
+  const base = finding({ file: "src/a.ts", line: 4, summary: "missing await" })
+  const merged = finding({
+    file: "src/a.ts",
+    line: 4,
+    summary: "Missing await! [same root cause also at: src/b.ts:8]",
+  })
+  assert.equal(findingMarker(base), findingMarker(merged))
+})
+
+test("an ambiguous inline timeout is not repeated in a general comment", async () => {
+  const scope = scopeOf(["src/a.ts"], { pr: 9 })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
+    if (argv[0] === "gh" && argv[1] === "api") {
+      if (argv.some((a) => a.includes("/pulls/9/comments")) && !argv.includes("--paginate")) {
+        return { code: 1, timedOut: true, stderr: "request timed out" }
+      }
+      return { code: 0 }
+    }
+    return { code: 1 }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /Posted 0\/1/)
+  assert.match(text, /may already be posted/)
+  assert.equal(
+    calls.some(
+      (c) =>
+        c.some((a) => a.startsWith("body=")) &&
+        c.some((a) => a.includes("/issues/9/comments")),
+    ),
+    false,
+  )
+})
+
+test("an existing inline marker prevents a duplicate general comment", async () => {
+  const f = finding({ file: "src/a.ts", line: 4 })
+  const scope = scopeOf(["src/a.ts"], { pr: 9 })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
+    if (argv[0] === "gh" && argv[1] === "api") {
+      if (argv.includes("--paginate")) {
+        // The previous run posted this finding inline; its body carries the
+        // same marker as a general comment would.
+        return argv.some((a) => a.includes("/pulls/9/comments"))
+          ? { stdout: commentBody(f) }
+          : { stdout: "" }
+      }
+      if (argv.some((a) => a.includes("/pulls/9/comments"))) {
+        return { code: 1, stderr: "422 Unprocessable Entity" }
+      }
+      return { code: 0 }
+    }
+    return { code: 1 }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result([f]), exec })
+  assert.match(text, /already in a general PR comment/)
+  assert.equal(
+    calls.some(
+      (c) =>
+        c.some((a) => a.startsWith("body=")) &&
+        c.some((a) => a.includes("/issues/9/comments")),
+    ),
+    false,
+  )
 })
 
 test("a failed existing-comment check does not post a duplicate", async () => {

@@ -171,13 +171,6 @@ function balancedAt(body: string, start: number): { end: number; parsed: unknown
 
 const RESULT_KEY = new RegExp(RESULT_KEY_PATTERN, "g")
 
-/** Distinctive placeholder strings; enum-like values such as CONFIRMED are excluded. */
-const SAMPLE_PLACEHOLDERS = new Set(
-  [SAMPLE_VALUE.file, SAMPLE_VALUE.summary, SAMPLE_VALUE.failure_scenario, SAMPLE_VALUE.evidence].filter(
-    (value): value is string => typeof value === "string",
-  ),
-)
-
 /** Placeholder strings that are unlikely to be real content, unlike a file path. */
 const SAMPLE_DISTINCTIVE = new Set(
   [SAMPLE_VALUE.summary, SAMPLE_VALUE.failure_scenario, SAMPLE_VALUE.evidence].filter(
@@ -185,37 +178,25 @@ const SAMPLE_DISTINCTIVE = new Set(
   ),
 )
 
-function countPlaceholders(value: unknown, allowed: Set<string>, seen = new Set<string>()): number {
+/**
+ * Count distinct placeholder strings that are unlikely to be real content. A
+ * real repository may legitimately contain `path/to/file.ts`; the file
+ * placeholder is not counted, and two findings in that file must not reach an
+ * echo threshold.
+ */
+function countDistinctivePlaceholders(value: unknown, seen = new Set<string>()): number {
   if (typeof value === "string") {
-    if (allowed.has(value)) seen.add(value)
+    if (SAMPLE_DISTINCTIVE.has(value)) seen.add(value)
     return seen.size
   }
   if (Array.isArray(value)) {
-    for (const item of value) countPlaceholders(item, allowed, seen)
+    for (const item of value) countDistinctivePlaceholders(item, seen)
     return seen.size
   }
   if (isRecord(value)) {
-    for (const item of Object.values(value)) countPlaceholders(item, allowed, seen)
+    for (const item of Object.values(value)) countDistinctivePlaceholders(item, seen)
   }
   return seen.size
-}
-
-/**
- * Count distinct placeholder strings, not occurrences. A real repository may
- * legitimately contain `path/to/file.ts`; two findings in that file must not
- * reach an occurrence-based echo threshold.
- */
-function countDistinctPlaceholders(value: unknown): number {
-  return countPlaceholders(value, SAMPLE_PLACEHOLDERS)
-}
-
-/**
- * A filled-in answer that kept the sentinel is a real result unless a
- * non-path placeholder remains. A real repository can contain
- * `path/to/file.ts`, so the file placeholder alone is not evidence of an echo.
- */
-function countDistinctivePlaceholders(value: unknown): number {
-  return countPlaceholders(value, SAMPLE_DISTINCTIVE)
 }
 
 /**
@@ -288,6 +269,15 @@ export function isSchemaEcho(value: unknown): boolean {
     // the real findings.
     if (items.every((item) => isPlaceholderFinding(item) || isPlaceholderVerdict(item))) {
       return true
+    }
+  }
+  // A mixed payload with at least one real list item is not an echo: the
+  // normalizers drop the placeholder item and keep the real findings.
+  for (const key of RESULT_ARRAY_KEYS) {
+    const items = value[key]
+    if (!Array.isArray(items) || items.length === 0) continue
+    if (items.some((item) => !isPlaceholderFinding(item) && !isPlaceholderVerdict(item))) {
+      return false
     }
   }
   // The sentinel marks a copied template, but a real repository can contain
@@ -681,6 +671,7 @@ export function normalizeCandidatesCall(
 ): NormalizedCall<{ candidates: RawFinding[]; dropped?: number; truncated?: boolean }> {
   if (!isRecord(value)) return { ok: false, error: "expected an object with a candidates array" }
   if (!Array.isArray(value.candidates)) return { ok: false, error: "candidates must be an array" }
+  let placeholders = 0
   const { items: candidates, notes, dropped } = normalizeList<RawFinding>(value.candidates, {
     key: "candidates",
     cap,
@@ -690,7 +681,10 @@ export function normalizeCandidatesCall(
     normalize: (item, i) => {
       // A partly filled template item is not a finding. Drop it without
       // rejecting the call, so the real candidates in the same payload survive.
-      if (isPlaceholderFinding(item)) return { dropped: false }
+      if (isPlaceholderFinding(item)) {
+        placeholders++
+        return { dropped: false }
+      }
       const finding = normalizeFinding(item)
       return finding
         ? { value: finding }
@@ -707,8 +701,15 @@ export function normalizeCandidatesCall(
       error: `${notes.filter((n) => n.includes("dropped")).join("; ")}. Re-emit every candidate with file, summary, and failure_scenario.`,
     }
   }
-  if (candidates.length === 0 && value.candidates.length > 0)
-    return { ok: false, error: notes[0] ?? "no candidate had the required file, summary, and failure_scenario fields" }
+  if (candidates.length === 0 && value.candidates.length > 0) {
+    return {
+      ok: false,
+      error:
+        placeholders > 0
+          ? "the payload contained only the schema example; re-emit real findings"
+          : (notes[0] ?? "no candidate had the required file, summary, and failure_scenario fields"),
+    }
+  }
   const truncated = notes.some((note) => note.includes("truncated at"))
   return { ok: true, value: { candidates, dropped, ...(truncated ? { truncated } : {}) }, notes }
 }
@@ -777,6 +778,7 @@ export function normalizeGroupVerdictsCall(
   if (!Array.isArray(value.verdicts)) return { ok: false, error: "verdicts must be an array" }
   const seen = new Set<number>()
   let missingEvidence = 0
+  let placeholders = 0
   const strictIndex = (value: unknown): number | undefined =>
     typeof value === "number" && Number.isInteger(value)
       ? value
@@ -784,7 +786,7 @@ export function normalizeGroupVerdictsCall(
         ? Number(value.trim())
         : undefined
   const zeroSubmitted = value.verdicts.some(
-    (item) => isRecord(item) && strictIndex(item.index) === 0,
+    (item) => isRecord(item) && !isPlaceholderVerdict(item) && strictIndex(item.index) === 0,
   )
   const { items: verdicts, notes, dropped } = normalizeList<{
     index: number
@@ -798,7 +800,10 @@ export function normalizeGroupVerdictsCall(
       if (!isRecord(item)) return { note: `verdicts[${i}] dropped: not an object` }
       // A copied example verdict is not a real judgement. Skip it without
       // rejecting the group, so the real verdicts in the same payload survive.
-      if (isPlaceholderVerdict(item)) return { dropped: false }
+      if (isPlaceholderVerdict(item)) {
+        placeholders++
+        return { dropped: false }
+      }
       const index = strictIndex(item.index)
       const verdict = normalizeVerdictText(item.verdict)
       if (index === undefined || index < 0) {
@@ -850,8 +855,15 @@ export function normalizeGroupVerdictsCall(
       error: "verdict indices must be zero-based: include index 0 for the first candidate.",
     }
   }
-  if (verdicts.length === 0 && value.verdicts.length > 0)
-    return { ok: false, error: "no verdict had a valid index and verdict" }
+  if (verdicts.length === 0 && value.verdicts.length > 0) {
+    return {
+      ok: false,
+      error:
+        placeholders > 0
+          ? "the payload contained only the schema example; re-emit real verdicts"
+          : "no verdict had a valid index and verdict",
+    }
+  }
   return {
     ok: true,
     value: {
@@ -868,12 +880,16 @@ export function normalizeReportCall(value: unknown, cap = 64): NormalizedCall<Re
   if (!isRecord(value)) return { ok: false, error: "expected an object with summary and findings" }
   if (!Array.isArray(value.findings)) return { ok: false, error: "findings must be an array" }
   const summary = str(value.summary)
+  let placeholders = 0
   const { items: findings, notes, dropped } = normalizeList<Report["findings"][number]>(value.findings, {
     key: "findings",
     cap,
     capOrder: "after",
     normalize: (item, i) => {
-      if (isPlaceholderFinding(item)) return { dropped: false }
+      if (isPlaceholderFinding(item)) {
+        placeholders++
+        return { dropped: false }
+      }
       const finding = normalizeFinding(item)
       return finding
         ? { value: finding }
@@ -881,8 +897,15 @@ export function normalizeReportCall(value: unknown, cap = 64): NormalizedCall<Re
     },
   })
   if (!summary) notes.push("summary was missing; using a generic summary")
-  if (findings.length === 0 && value.findings.length > 0)
-    return { ok: false, error: notes[0] ?? "no finding had the required file, summary, and failure_scenario fields" }
+  if (findings.length === 0 && value.findings.length > 0) {
+    return {
+      ok: false,
+      error:
+        placeholders > 0
+          ? "the payload contained only the schema example; re-emit real findings"
+          : (notes[0] ?? "no finding had the required file, summary, and failure_scenario fields"),
+    }
+  }
   // A capped report is not a complete report. Carry the flag so the engine can
   // mark the run partial instead of presenting a silently shortened list.
   const truncated = notes.some((note) => note.includes("truncated at"))

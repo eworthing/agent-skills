@@ -495,15 +495,6 @@ export type LimitResolution = {
 }
 
 /**
- * Reference `fo`: the 32 cap applies whenever the review runs as a fork, not
- * only when the output is the ReportFindings tool. The engine path is the
- * fork equivalent here, so `--json` must not lift the bound.
- */
-export function hardLimitApplies(usesEngine: boolean, hasReportFindings: boolean): boolean {
-  return usesEngine || hasReportFindings
-}
-
-/**
  * Reference `fo`: resolve --max-findings.
  * `stated` is what the prompt receives; `capAtHardLimit` is true on the
  * engine/fork path or when the output is ReportFindings.

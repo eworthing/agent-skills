@@ -1079,6 +1079,90 @@ test("streaming dedupe keeps a confirmed duplicate over a refuted one", async ()
   assert.equal(result.findings[0].verdict, "CONFIRMED")
 })
 
+test("a lower-index recheck never presents unverified text as confirmed", async () => {
+  const a = candidate("src/a.ts", 14, "same bug", "scenario A")
+  const b = candidate("src/a.ts", 12, "same bug", "scenario B")
+  let verifierCalls = 0
+  let sweepPrompt = ""
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "xhigh",
+    script: {
+      delay: (req) => (req.role === "finder" && req.label === "angle-A" ? 50 : 0),
+      finder: (req) =>
+        req.label === "angle-A"
+          ? { candidates: [a] }
+          : req.label === "angle-B"
+            ? { candidates: [b] }
+            : { candidates: [] },
+      verifier: () => {
+        verifierCalls++
+        return verifierCalls === 1 ? CONFIRMED("line 12 is reachable") : REFUTED("line 14 is guarded")
+      },
+      sweep: (req) => {
+        sweepPrompt = req.prompt
+        return { candidates: [] }
+      },
+      synthesize: () => null,
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].line, 12)
+  assert.equal(result.findings[0].failure_scenario, "scenario B")
+  assert.equal(result.refuted.length, 0)
+  // The refuted lower-index copy is a duplicate of the confirmed finding, not
+  // a refutation of it; the sweep still sees it as a duplicate.
+  assert.match(sweepPrompt, /src\/a\.ts:14/)
+  assert.match(sweepPrompt, /duplicate — do not re-report/)
+})
+
+test("distinct refuted scenarios both stay in the refuted guard", async () => {
+  const a = candidate("src/a.ts", 12, "same bug", "scenario one")
+  const b = candidate("src/a.ts", 14, "same bug", "scenario two")
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "high",
+    script: {
+      delay: (req) => (req.role === "finder" && req.label === "angle-B" ? 50 : 0),
+      finder: (req) =>
+        req.label === "angle-A"
+          ? { candidates: [a] }
+          : req.label === "angle-B"
+            ? { candidates: [b] }
+            : { candidates: [] },
+      verifier: () => REFUTED(),
+    },
+  })
+  assert.equal(result.findings.length, 0)
+  assert.equal(result.refuted.length, 2)
+  assert.ok(result.refuted.some((f) => f.line === 12))
+  assert.ok(result.refuted.some((f) => f.line === 14))
+})
+
+test("a refuted barrier duplicate gets one retry", async () => {
+  const same = candidate("src/a.ts", 7, "same bug")
+  let verifierCalls = 0
+  const { result } = await review({
+    version: "cc-2.1.318",
+    level: "high",
+    script: {
+      finder: (req) =>
+        req.label === "angle-A" || req.label === "angle-B"
+          ? { candidates: [same] }
+          : { candidates: [] },
+      verifier: () => {
+        verifierCalls++
+        return verifierCalls === 1 ? REFUTED() : CONFIRMED()
+      },
+    },
+  })
+  // The barrier dedupes the exact claim before verification. When the first
+  // copy is refuted, one dropped duplicate is verified instead of losing a
+  // real bug to a bad first verdict.
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].verdict, "CONFIRMED")
+})
+
 test("a confirmed duplicate does not consume another finder's verifier slots", async () => {
   const shared = candidate("src/a.ts", 1, "shared bug")
   const aUnique = candidate("src/a.ts", 10, "a unique")
@@ -2044,11 +2128,12 @@ test("an invented sweep category cannot claim correctness priority", async () =>
   assert.equal(result.findings[1].kind, "cleanup")
 })
 
-test("a contiguous 1-based subset is shifted onto zero-based survivors", async () => {
+test("a contiguous subset with no index 0 falls back instead of guessing", async () => {
   const items = ["zero", "one", "two", "three", "four"].map((s, i) =>
     candidate("src/a.ts", i + 1, `${s} bug`),
   )
   const { result } = await review({
+    level: "xhigh",
     semanticMerge: true,
     limit: 5,
     script: {
@@ -2063,9 +2148,10 @@ test("a contiguous 1-based subset is shifted onto zero-based survivors", async (
           : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }] },
     },
   })
-  // A contiguous run starting at 1 is the model's 1-based subset convention.
-  // Shift it onto survivors 0 and 1 instead of treating it as a zero-based
-  // subset that dropped the most severe finding.
+  // A contiguous run starting at 1 could be a 1-based subset or a zero-based
+  // subset that omitted 0. The base is unknowable, so the deterministic
+  // fallback keeps all five findings instead of merging the wrong pair.
+  assert.equal(result.findings.length, 5)
   assert.equal(result.findings[0].summary, "zero bug")
-  assert.equal(result.findings[1].summary, "one bug")
+  assert.equal(result.findings[4].summary, "four bug")
 })

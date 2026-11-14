@@ -450,13 +450,14 @@ function labelFor(spec: DiffSpec, root: string, cwd: string): string {
       : root
   const unsafeRoot = !inRoot && (relativeRoot === undefined || isShellDenied(relativeRoot))
   const unsafeRange = omitRange
-  const command = unsafeRoot || unsafeRange
+  const unsafePathspec = omitPathspec
+  const command = unsafeRoot || unsafeRange || unsafePathspec
     ? ""
     : relativeRoot === undefined
       ? ["git", ...GIT_HARDENING, ...argv].join(" ")
       : ["git", "-C", quote([relativeRoot]), ...GIT_HARDENING, ...argv].join(" ")
   const notes = [
-    omitPathspec ? "pathspec omitted: shell metacharacter in the review target" : "",
+    omitPathspec ? "command omitted: shell metacharacter in the review target" : "",
     unsafeRoot ? "command omitted: repository root contains a shell metacharacter" : "",
     unsafeRange ? "command omitted: shell metacharacter in the review range" : "",
   ].filter(Boolean)
@@ -937,7 +938,7 @@ export function diffSideMap(
   }
 }
 
-function readCapped(path: string, budget: number, knownSize?: number): string {
+export function readCapped(path: string, budget: number, knownSize?: number): string {
   try {
     if (budget <= 0) return ""
     const size = knownSize ?? statSync(path).size
@@ -963,23 +964,25 @@ function readCapped(path: string, budget: number, knownSize?: number): string {
       // never read, so those bytes must still carry the truncation marker.
       const complete = read < byteBudget || byteBudget >= size
       const marker = "\n…(truncated)"
+      const shortMarker = "…"
+      // Keep the returned value inside the cap: callers sum lengths to enforce
+      // the conventions budget, and appending a marker past the cap made a
+      // later source look unaffordable. A budget too small for the full marker
+      // still carries the ellipsis signal.
+      const capped = (): string => {
+        if (budget <= shortMarker.length) return shortMarker.slice(0, budget)
+        if (budget <= marker.length) {
+          return `${truncateText(text, budget - shortMarker.length)}${shortMarker}`
+        }
+        return `${truncateText(text, budget - marker.length)}${marker}`
+      }
       if (complete) {
         // A file that fits the byte budget can still exceed the character
         // budget (the byte budget allows up to three bytes per code unit).
         // Mark the cut instead of presenting a truncated file as complete.
-        if (text.length <= budget) return text
-        // A budget smaller than the marker cannot fit both content and the
-        // signal; return the marker rather than presenting a silent cut.
-        return budget <= marker.length
-          ? marker
-          : `${truncateText(text, budget - marker.length)}${marker}`
+        return text.length <= budget ? text : capped()
       }
-      // Keep the returned value inside the cap: callers sum lengths to enforce
-      // the conventions budget, and appending a marker past the cap made a later
-      // source look unaffordable.
-      return budget <= marker.length
-        ? marker
-        : `${truncateText(text, budget - marker.length)}${marker}`
+      return capped()
     } finally {
       closeSync(fd)
     }
@@ -1422,6 +1425,8 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   let prHeadVerified = false
   /** The verified head, even when the metadata payload was unavailable. */
   let verifiedPrHead: string | undefined
+  /** The PR URL captured by the head bracket or metadata, whichever succeeded. */
+  let verifiedPrUrl: string | undefined
   let firstFiles: string[] | undefined
   let firstFilesFailed = false
   const warnings: string[] = []
@@ -1452,19 +1457,27 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
         return undefined
       }
     }
+    /** A head read failure worth retrying; auth/unknown-field errors are not. */
+    const transientHeadFailure = (result: ExecResult): boolean =>
+      result.timedOut === true ||
+      /\b(?:5\d\d|429|timeout|timed out|rate limit|ECONNRESET|ETIMEDOUT)\b/i.test(result.stderr)
     /** One head-only read, retried once on a transient failure. */
-    const readHead = async (): Promise<string | undefined> => {
+    const readHead = async (): Promise<{ head?: string; url?: string }> => {
       for (let attempt = 0; attempt < 2; attempt++) {
         const result = await exec(
-          ["gh", "pr", "view", String(pr), "--json", "headRefOid"],
+          ["gh", "pr", "view", String(pr), "--json", "headRefOid,url"],
           gitCwd,
           callOpts(),
         )
-        if (result.aborted) return undefined
+        if (result.aborted) return {}
         const value = parseMeta(result)
-        if (typeof value?.headRefOid === "string" && value.headRefOid) return value.headRefOid
+        const head =
+          typeof value?.headRefOid === "string" && value.headRefOid ? value.headRefOid : undefined
+        const url = typeof value?.url === "string" && value.url ? value.url : undefined
+        if (head) return { head, url }
+        if (attempt === 0 && !transientHeadFailure(result)) return {}
       }
-      return undefined
+      return {}
     }
     const checkPair = (patchResult: ExecResult, metaResult: ExecResult): void => {
       assertExec(patchResult, "gh pr diff", timeoutSuffix, "PR diff discovery was cancelled.")
@@ -1474,30 +1487,36 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       if (metaResult.aborted) throw new Error("PR metadata discovery was cancelled.")
     }
     const verifyHead = opts.verifyPrHead !== false
-    let headBefore = verifyHead ? await readHead() : undefined
+    let headBefore = verifyHead ? await readHead() : {}
     let [meta, gh] = await Promise.all([readMeta(), readPatch()])
     let metaJson = parseMeta(meta)
     // Fail before the trailing head read when the patch is already unusable:
     // the head read (and its retry) would only add two more gh timeouts.
     checkPair(gh, meta)
-    let headAfter = verifyHead ? await readHead() : undefined
+    let headAfter = verifyHead ? await readHead() : {}
     const headMoved =
-      headBefore !== undefined && headAfter !== undefined && headBefore !== headAfter
+      headBefore.head !== undefined &&
+      headAfter.head !== undefined &&
+      headBefore.head !== headAfter.head
     const metaDisagrees =
-      headAfter !== undefined &&
+      headAfter.head !== undefined &&
       typeof metaJson?.headRefOid === "string" &&
-      metaJson.headRefOid !== headAfter
+      metaJson.headRefOid !== headAfter.head
     if (verifyHead && (headMoved || metaDisagrees)) {
-      // The head moved while the pair was being fetched; take one fresh pair.
-      headBefore = await readHead()
-      ;[meta, gh] = await Promise.all([readMeta(), readPatch()])
-      metaJson = parseMeta(meta)
-      checkPair(gh, meta)
-      headAfter = await readHead()
+      // Keep the captured patch; a moved head only means it cannot be pinned.
+      // The general-comment fallback handles the unverified head without
+      // re-downloading a large patch that may time out.
+      headBefore = {}
+      headAfter = {}
     }
     prMetaJson = metaJson
     const reviewedHead =
-      headAfter ?? (typeof metaJson?.headRefOid === "string" ? metaJson.headRefOid : undefined)
+      headAfter.head ??
+      (typeof metaJson?.headRefOid === "string" ? metaJson.headRefOid : undefined)
+    verifiedPrUrl =
+      headAfter.url ??
+      headBefore.url ??
+      (typeof metaJson?.url === "string" ? metaJson.url : undefined)
     // An unavailable head read is not proof that the patch matches. Only a
     // bracketed pair that agrees with the metadata authorizes pinning; a
     // failed check leaves prHeadOid unset so posting uses a head-independent
@@ -1506,10 +1525,11 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     prHeadVerified =
       reviewedHead !== undefined &&
       (!verifyHead ||
-        (headBefore !== undefined &&
-          headAfter !== undefined &&
-          headBefore === headAfter &&
-          (typeof metaJson?.headRefOid !== "string" || metaJson.headRefOid === headAfter)))
+        (headBefore.head !== undefined &&
+          headAfter.head !== undefined &&
+          headBefore.head === headAfter.head &&
+          (typeof metaJson?.headRefOid !== "string" ||
+            metaJson.headRefOid === headAfter.head)))
     // The bracket can verify the head even when the metadata payload was
     // unavailable. Keep that OID so --comment can still pin inline comments.
     verifiedPrHead = prHeadVerified ? reviewedHead : undefined
@@ -1537,34 +1557,33 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     // The reference's branch review also includes uncommitted changes when
     // that branch is the checked-out one. A remote-only target must not pull
     // in edits from whichever local branch happens to be current.
-    const [current, fullRef] = await Promise.all([
-      git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "HEAD"], callOpts()),
-      git(exec, gitCwd, ["rev-parse", "--symbolic-full-name", branchRef ?? target], callOpts()),
-    ])
-    assertExec(current, "git rev-parse", timeoutSuffix)
-    // `fullRef` only refines whether the target names the checked-out branch;
-    // a timeout or missing ref falls back to the abbreviated-name comparison
-    // instead of failing an otherwise healthy review.
-    const currentName = current.stdout.trim()
-    // A remote-tracking or qualified target can name the checked-out branch
-    // without being byte-identical to its abbreviated name. The same helper
-    // posting uses keeps the remote-prefix rule in one place.
-    const full = fullRef.code === 0 ? fullRef.stdout.trim() : ""
-    // A remote-tracking target (`origin/main`) names the checked-out branch
-    // without being byte-identical to its abbreviated name. The
-    // `refs/remotes/` guard keeps a local branch named `origin/main` from
-    // being treated as a remote-tracking ref and pulling in unrelated
-    // worktree edits.
-    const fullIsRemote = full.startsWith("refs/remotes/")
+    const current = await git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "HEAD"], callOpts())
+    // The probe only decides whether to include uncommitted worktree changes;
+    // a timeout skips that inclusion instead of failing the committed range
+    // review.
+    const currentName = current.code === 0 ? current.stdout.trim() : ""
     let sameBranch =
       sameRefName(currentName, target) ||
       sameRefName(currentName, branchRef ?? target)
-    if (!sameBranch && fullIsRemote) {
-      const remotes = await git(exec, gitCwd, ["remote"], callOpts())
-      assertExec(remotes, "git remote", timeoutSuffix)
-      const remoteNames =
-        remotes.code === 0 ? remotes.stdout.trim().split(/\s+/).filter(Boolean) : []
-      sameBranch = sameRefName(full, currentName, remoteNames)
+    if (!sameBranch) {
+      // Probe the symbolic ref only when the abbreviated comparison fails; it
+      // is pure waste when the target names the checked-out branch. The
+      // `refs/remotes/` guard keeps a local branch named `origin/main` from
+      // being treated as a remote-tracking ref.
+      const fullRef = await git(
+        exec,
+        gitCwd,
+        ["rev-parse", "--symbolic-full-name", branchRef ?? target],
+        callOpts(),
+      )
+      const full = fullRef.code === 0 ? fullRef.stdout.trim() : ""
+      if (full.startsWith("refs/remotes/")) {
+        const remotes = await git(exec, gitCwd, ["remote"], callOpts())
+        assertExec(remotes, "git remote", timeoutSuffix)
+        const remoteNames =
+          remotes.code === 0 ? remotes.stdout.trim().split(/\s+/).filter(Boolean) : []
+        sameBranch = sameRefName(full, currentName, remoteNames)
+      }
     }
     if (current.code === 0 && sameBranch) {
       const [worktree, listed] = await Promise.all([
@@ -1672,7 +1691,8 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       files = parsed.files.map((f) => f.path ?? "").filter(Boolean)
     }
     if (prHeadVerified && verifiedPrHead) prHeadOid = verifiedPrHead
-    if (typeof parsed?.url === "string" && parsed.url) prUrl = parsed.url
+    if (verifiedPrUrl) prUrl = verifiedPrUrl
+    else if (typeof parsed?.url === "string" && parsed.url) prUrl = parsed.url
     // A missing or unverified head is a comment-only concern: the patch and
     // file list may still be complete. `postComments` refuses inline anchors
     // when `prHeadOid` is unset, so this must not mark the review partial.

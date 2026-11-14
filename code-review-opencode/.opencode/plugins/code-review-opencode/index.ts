@@ -51,7 +51,6 @@ import {
 } from "./prompts.ts"
 import {
   fixAction,
-  hardLimitApplies,
   parseArgs,
   parseExtensions,
   parseRoleVariants,
@@ -466,16 +465,13 @@ async function resolveAndRun(
   // result instead of spelling the same dry-run/json gates again.
   const fixMode = fixAction(parsed.fix, flags.dryRun, flags.json)
   const applyFix = fixMode === "apply"
-  // An engine report is text, but --fix re-reports through ReportFindings, so
-  // that path still needs the host's 32-entry cap.
-  const hasReportFindings = kind === "reportfindings" && (!usesEngine || applyFix)
   // The reference's `fo` caps `--max-findings all` at 32 on the fork path
   // regardless of output mode. The engine path is the fork equivalent here, so
   // `--json` keeps the same ceiling instead of exposing the uncapped tail.
   const limit = resolveMaxFindings(
     parsed,
     cell,
-    hardLimitApplies(usesEngine, hasReportFindings),
+    usesEngine || kind === "reportfindings",
     typeof storedMax === "number" || storedMax === "all" ? storedMax : undefined,
   )
   const max = promptLimit(cell, limit.stated)

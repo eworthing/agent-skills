@@ -6,7 +6,7 @@
  * reference's GitLab path, but the host path reports that --comment was
  * ignored on a non-GitHub remote.
  */
-import type { EngineResult } from "./engine.ts"
+import { normalizedSummary, type EngineResult } from "./engine.ts"
 import type { Scope } from "./scope.ts"
 import { createHash } from "node:crypto"
 import {
@@ -18,7 +18,7 @@ import {
   type ExecResult,
 } from "./scope.ts"
 import { mapLimit } from "./concurrency.ts"
-import { envInt, lineOf, pluralWord, positiveLine, renderedLocation } from "./finding.ts"
+import { envInt, lineOf, pluralize, pluralWord, positiveLine, renderedLocation } from "./finding.ts"
 import { samePrBase } from "./refs.ts"
 
 export { samePrBase } from "./refs.ts"
@@ -49,6 +49,12 @@ function enterpriseHost(host: string | undefined): string | undefined {
   return host && host.toLowerCase() !== "github.com" ? host : undefined
 }
 
+/** One `gh api` preamble shared by the inline and summary comment builders. */
+function ghApiArgs(hostname: string | undefined, endpoint: string): string[] {
+  const host = enterpriseHost(hostname)
+  return ["gh", "api", ...(host ? ["--hostname", host] : []), endpoint]
+}
+
 export function buildGitHubCommentArgs(opts: {
   owner: string
   repo: string
@@ -62,12 +68,8 @@ export function buildGitHubCommentArgs(opts: {
   /** GitHub Enterprise hostname; omitted for github.com. */
   hostname?: string
 }): string[] {
-  const hostname = enterpriseHost(opts.hostname)
   return [
-    "gh",
-    "api",
-    ...(hostname ? ["--hostname", hostname] : []),
-    `repos/${opts.owner}/${opts.repo}/pulls/${opts.pr}/comments`,
+    ...ghApiArgs(opts.hostname, `repos/${opts.owner}/${opts.repo}/pulls/${opts.pr}/comments`),
     "-f",
     `body=${opts.body}`,
     "-f",
@@ -81,8 +83,14 @@ export function buildGitHubCommentArgs(opts: {
   ]
 }
 
-export function commentBody(finding: { summary: string; failure_scenario: string }): string {
-  return `${finding.summary}\n\nFailure scenario: ${finding.failure_scenario}`
+export function commentBody(finding: {
+  file: string
+  line?: number
+  summary: string
+  failure_scenario: string
+  kind?: "correctness" | "cleanup"
+}): string {
+  return `${finding.summary}\n\nFailure scenario: ${finding.failure_scenario}\n\n${findingMarker(finding)}`
 }
 
 /** A single PR-level comment, used when a finding has no valid inline anchor. */
@@ -94,12 +102,8 @@ export function buildGitHubSummaryArgs(opts: {
   /** GitHub Enterprise hostname; omitted for github.com. */
   hostname?: string
 }): string[] {
-  const hostname = enterpriseHost(opts.hostname)
   return [
-    "gh",
-    "api",
-    ...(hostname ? ["--hostname", hostname] : []),
-    `repos/${opts.owner}/${opts.repo}/issues/${opts.pr}/comments`,
+    ...ghApiArgs(opts.hostname, `repos/${opts.owner}/${opts.repo}/issues/${opts.pr}/comments`),
     "-f",
     `body=${opts.body}`,
   ]
@@ -115,13 +119,17 @@ export function findingMarker(finding: {
   file: string
   line?: number
   summary: string
-  failure_scenario: string
+  kind?: "correctness" | "cleanup"
 }): string {
+  // The summary can gain a `[same root cause also at: ...]` suffix or be
+  // reworded by the synthesizer. Hash the normalized base claim so a retry
+  // recognizes the same finding instead of posting a duplicate comment.
+  const base = finding.summary.replace(/\s*\[same root cause also at: [^\]]*\]\s*$/, "")
   const seed = JSON.stringify([
     finding.file,
     finding.line ?? null,
-    finding.summary,
-    finding.failure_scenario,
+    finding.kind ?? "correctness",
+    normalizedSummary(base),
   ])
   const hash = createHash("sha256").update(seed).digest("hex").slice(0, 16)
   return `<!-- code-review-opencode:finding:${hash} -->`
@@ -129,7 +137,13 @@ export function findingMarker(finding: {
 
 /** The one-comment fallback: every finding that could not be posted inline. */
 export function summaryCommentBody(
-  findings: Array<{ file: string; line?: number; summary: string; failure_scenario: string }>,
+  findings: Array<{
+    file: string
+    line?: number
+    summary: string
+    failure_scenario: string
+    kind?: "correctness" | "cleanup"
+  }>,
 ): string {
   const entries = findings.map(
     (f) =>
@@ -539,40 +553,58 @@ export async function postComments(deps: CommentDeps): Promise<string> {
               ...(githubHostname ? { hostname: githubHostname } : {}),
             }),
           )
-          return r.code === 0
-            ? { ok: true, message: "" }
-            : { ok: false, message: `${renderedLocation(f)}: ${r.stderr.trim() || "gh api failed"}` }
+          if (r.code === 0) return { ok: true, message: "" }
+          // A timeout or 5xx does not prove the review comment was not
+          // created. Do not repeat an ambiguous post in the general comment.
+          const ambiguous =
+            r.timedOut === true ||
+            r.aborted === true ||
+            /\b(?:5\d\d|429|rate limit|timeout|timed out|ECONNRESET|ETIMEDOUT)\b/i.test(r.stderr)
+          return {
+            ok: false,
+            ambiguous,
+            message: `${renderedLocation(f)}: ${r.stderr.trim() || "gh api failed"}`,
+          }
         })
       })()
   const posted = outcomes.filter((o) => o.ok).length
-  const unposted = result.findings.filter((_, i) => !outcomes[i].ok)
+  const unposted = result.findings.filter(
+    (_, i) => !outcomes[i].ok && !outcomes[i].ambiguous,
+  )
   // The reference's GitLab path posts one general MR note; the same mechanism
   // keeps GitHub findings visible when an inline anchor is impossible. Only
   // the failed findings go in the note, so a successful inline post is never
   // duplicated.
   let summary = ""
   if (unposted.length > 0) {
-    // A retry after a transient inline failure must not add a second general
-    // comment for the same finding. Each finding carries its own marker, so a
-    // changed inline-success subset neither hides a finding that was never
-    // posted nor reposts one that was.
-    const existing = await call([
-      "gh",
-      "api",
-      ...(githubHostname ? ["--hostname", githubHostname] : []),
-      `repos/${owner}/${name}/issues/${pr}/comments`,
-      "--paginate",
-      "--jq",
-      ".[].body",
+    // A retry after a transient inline failure must not add a second comment
+    // for the same finding. Each finding carries its own marker in both inline
+    // and general comment bodies, so a changed inline-success subset neither
+    // hides a finding that was never posted nor reposts one that is.
+    const [issueComments, reviewComments] = await Promise.all([
+      call([
+        ...ghApiArgs(githubHostname, `repos/${owner}/${name}/issues/${pr}/comments`),
+        "--paginate",
+        "--jq",
+        ".[].body",
+      ]),
+      call([
+        ...ghApiArgs(githubHostname, `repos/${owner}/${name}/pulls/${pr}/comments`),
+        "--paginate",
+        "--jq",
+        ".[].body",
+      ]),
     ])
-    if (existing.code !== 0) {
+    if (issueComments.code !== 0 || reviewComments.code !== 0) {
       // An unavailable check is not proof that the comment exists. Refuse to
       // post rather than risk a duplicate general comment.
-      summary = ` Could not verify whether the ${unposted.length} ${pluralWord(unposted.length, "finding")} were already posted; no general PR comment was posted: ${existing.stderr.trim() || "gh api failed"}.`
+      const failed = issueComments.code !== 0 ? issueComments : reviewComments
+      summary = ` Could not verify whether the ${pluralize(unposted.length, "finding")} were already posted; no general PR comment was posted: ${failed.stderr.trim() || "gh api failed"}.`
     } else {
-      const missing = unposted.filter((f) => !existing.stdout.includes(findingMarker(f)))
+      const existingBodies = `${issueComments.stdout}\n${reviewComments.stdout}`
+      const missing = unposted.filter((f) => !existingBodies.includes(findingMarker(f)))
       if (missing.length === 0) {
-        summary = ` The ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline are already in a general PR comment.`
+        summary = ` The ${pluralize(unposted.length, "finding")} that could not be posted inline are already in a general PR comment.`
       } else {
         const already = unposted.length - missing.length
         const r = await call(
@@ -586,12 +618,18 @@ export async function postComments(deps: CommentDeps): Promise<string> {
         )
         summary =
           r.code === 0
-            ? ` Posted the ${missing.length} ${pluralWord(missing.length, "finding")} that could not be posted inline as a general PR comment${already > 0 ? ` (${already} already posted)` : ""}.`
-            : ` Could not post the ${missing.length} ${pluralWord(missing.length, "finding")} that could not be posted inline as a general PR comment: ${r.stderr.trim() || "gh api failed"}.`
+            ? ` Posted the ${pluralize(missing.length, "finding")} that could not be posted inline as a general PR comment${already > 0 ? ` (${already} already posted)` : ""}.`
+            : ` Could not post the ${pluralize(missing.length, "finding")} that could not be posted inline as a general PR comment: ${r.stderr.trim() || "gh api failed"}.`
       }
     }
   }
-  const failures = outcomes.filter((o) => !o.ok).map((o) => o.message)
+  const failures = outcomes
+    .filter((o) => !o.ok)
+    .map((o) =>
+      o.ambiguous
+        ? `${o.message} (may already be posted; not repeated in a general comment)`
+        : o.message,
+    )
   const suffix = failures.length > 0 ? `\n${failures.map((x) => `  - ${x}`).join("\n")}` : ""
   const headNote = headUnverified
     ? " The reviewed PR head was not verified, so the findings were kept out of inline comments."

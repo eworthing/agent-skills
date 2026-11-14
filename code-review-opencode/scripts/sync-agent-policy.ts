@@ -13,20 +13,17 @@ import { fileURLToPath } from "node:url"
 import {
   REVIEW_AGENT_IDS,
   renderAgentPolicyYaml,
+  replacePolicyBlock,
 } from "../.opencode/plugins/code-review-opencode/agent-policy.ts"
 
 const agentsDir = fileURLToPath(new URL("../.opencode/agents/", import.meta.url))
-const BLOCK = /^permissions:\n[\s\S]*?(?=^---$)/m
 const check = process.argv.includes("--check")
 let stale = false
 
 for (const id of REVIEW_AGENT_IDS) {
   const path = join(agentsDir, `${id}.md`)
   const text = readFileSync(path, "utf8")
-  if (!BLOCK.test(text)) {
-    throw new Error(`${path}: no permissions block found before the closing frontmatter fence`)
-  }
-  const next = text.replace(BLOCK, `${renderAgentPolicyYaml(id)}\n\n`)
+  const next = replacePolicyBlock(text, renderAgentPolicyYaml(id))
   if (check) {
     if (next !== text) {
       stale = true

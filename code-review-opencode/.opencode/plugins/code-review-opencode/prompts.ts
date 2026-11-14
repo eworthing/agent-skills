@@ -52,10 +52,13 @@ export const VERDICT_LADDER = () => frag("verdict-ladder").trimEnd()
 export const VERDICT_LADDER_RECALL = () => frag("verdict-ladder-recall").trimEnd()
 export const SWEEP_FOCUS = () => frag("sweep-focus").trimEnd()
 
-/** The one labeled list of correctness fragments, in angle order. */
-export type CorrectnessLens = { label: string; text: () => string }
+/** The shared contract for one labeled prompt fragment. */
+export type PromptLens = { label: string; text: () => string }
+export type CorrectnessLens = PromptLens
+export type CleanupLens = PromptLens
 
-export const CORRECTNESS_LENSES: readonly CorrectnessLens[] = [
+/** The one labeled list of correctness fragments, in angle order. */
+export const CORRECTNESS_LENSES: readonly PromptLens[] = [
   { label: "angle-A", text: ANGLE_A },
   { label: "angle-B", text: ANGLE_B },
   { label: "angle-C", text: ANGLE_C },
@@ -65,14 +68,12 @@ export const CORRECTNESS_LENSES: readonly CorrectnessLens[] = [
 
 const CORRECTNESS_FRAGMENTS = CORRECTNESS_LENSES.map((lens) => lens.text)
 
-export type CleanupLens = { label: string; text: () => string }
-
 /**
  * The cleanup lenses, with the label that names the same lens in a finding's
  * category. Engine and prompt assembly both read this list, so a label cannot
  * drift from its fragment by position.
  */
-export const CLEANUP_LENSES: readonly CleanupLens[] = [
+export const CLEANUP_LENSES: readonly PromptLens[] = [
   { label: "reuse", text: REUSE },
   { label: "simplification", text: SIMPLIFICATION },
   { label: "efficiency", text: EFFICIENCY },

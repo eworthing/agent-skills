@@ -75,6 +75,56 @@ test("one partly filled template item does not reject the real candidates", () =
   }
 })
 
+test("a sentinel payload with real items is not an echo", () => {
+  const payload = {
+    __example: true,
+    candidates: [
+      { file: "src/a.ts", line: 1, summary: "real one", failure_scenario: "input A fails" },
+      { file: "src/b.ts", line: 2, summary: "real two", failure_scenario: "input B fails" },
+      { file: "path/to/file.ts", summary: "one sentence", failure_scenario: "a real scenario" },
+    ],
+  }
+  assert.equal(isSchemaEcho(payload), false)
+  const parsed = normalizeCandidatesCall(payload)
+  assert.equal(parsed.ok, true)
+  if (parsed.ok) assert.equal(parsed.value.candidates.length, 2)
+})
+
+test("a placeholder verdict at index 0 does not disable a 1-based shift", () => {
+  const shifted = asGroupVerdicts(
+    {
+      verdicts: [
+        { index: 0, verdict: "CONFIRMED", evidence: "line 12: ..." },
+        { index: 1, verdict: "CONFIRMED", evidence: "e1" },
+        { index: 2, verdict: "PLAUSIBLE", evidence: "e2" },
+        { index: 3, verdict: "CONFIRMED", evidence: "e3" },
+        { index: 4, verdict: "REFUTED", evidence: "e4" },
+      ],
+    },
+    4,
+  )
+  assert.deepEqual(shifted, [
+    { index: 0, verdict: "CONFIRMED", evidence: "e1" },
+    { index: 1, verdict: "PLAUSIBLE", evidence: "e2" },
+    { index: 2, verdict: "CONFIRMED", evidence: "e3" },
+    { index: 3, verdict: "REFUTED", evidence: "e4" },
+  ])
+})
+
+test("a placeholder-only payload names the schema example", () => {
+  const candidates = normalizeCandidatesCall({
+    candidates: [{ file: "path/to/file.ts", summary: "one sentence", failure_scenario: "a real scenario" }],
+  })
+  assert.equal(candidates.ok, false)
+  if (!candidates.ok) assert.match(candidates.error, /schema example/)
+  const report = normalizeReportCall({
+    summary: "one sentence",
+    findings: [{ file: "path/to/file.ts", summary: "one sentence", failure_scenario: "a real scenario" }],
+  })
+  assert.equal(report.ok, false)
+  if (!report.ok) assert.match(report.error, /schema example/)
+})
+
 test("a real sample path with the sentinel is not an echo", () => {
   assert.equal(
     isSchemaEcho({

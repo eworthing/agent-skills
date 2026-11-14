@@ -104,32 +104,40 @@ export function renderAgentPolicyYaml(agentID: string): string {
   return lines.join("\n")
 }
 
+const POLICY_BLOCK = /^permissions:\n[\s\S]*?(?=^---$)/m
+
+/**
+ * Replace the frontmatter permissions block. The replacer is a function so a
+ * `$`-pattern in a policy resource (`$&`, `$1`, `$'`) is written verbatim
+ * instead of being interpreted by `String.replace`.
+ */
+export function replacePolicyBlock(text: string, block: string): string {
+  if (!POLICY_BLOCK.test(text)) {
+    throw new Error("no permissions block found before the closing frontmatter fence")
+  }
+  return text.replace(POLICY_BLOCK, () => `${block}\n\n`)
+}
+
 /**
  * Merge the read-only policy into an agent's existing rules without dropping
  * host rules for actions the policy does not govern.
  *
  * OpenCode evaluates permissions last-match-wins. The policy's broad deny is
- * kept first; preserved host rules follow it, then the policy's specific
- * allows and denies. That keeps host extensions for unrelated concrete
- * actions (for example `webfetch`) working while the read-only rules remain
- * authoritative for shell, read, glob, grep, and the review tools. Existing
- * broad (`*`) rules are replaced by the policy's deny-all: a host rule such
- * as `*:/tmp/* allow` would otherwise sit after the deny and bypass it for
- * every action. A stale shell allow from an older hardening version is
- * likewise replaced rather than surviving behind the broad deny.
+ * kept first; preserved read-only host extensions follow it, then the policy's
+ * specific allows and denies. Only `webfetch`/`websearch` are preserved: a
+ * host `edit`, `write`, or `patch` allow would otherwise sit after the deny
+ * and let a review child modify the working tree. Existing broad (`*`) rules
+ * are replaced by the deny-all for the same reason, and a stale shell allow
+ * from an older hardening version is rebuilt from the current policy.
  */
 export function mergeReviewAgentPermissions(
   existing: readonly AgentPermission[],
   policy: readonly AgentPermission[],
 ): AgentPermission[] {
-  const governed = new Set(
-    policy.filter((rule) => rule.action !== "*").map((rule) => rule.action),
-  )
+  const preservedActions = new Set(["webfetch", "websearch"])
   const broad = policy.filter((rule) => rule.action === "*")
   const specific = policy.filter((rule) => rule.action !== "*")
-  const preserved = existing.filter(
-    (rule) => rule.action !== "*" && !governed.has(rule.action),
-  )
+  const preserved = existing.filter((rule) => preservedActions.has(rule.action))
   return [...broad, ...preserved, ...specific]
 }
 

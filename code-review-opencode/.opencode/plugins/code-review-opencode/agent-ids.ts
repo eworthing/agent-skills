@@ -1,8 +1,9 @@
 /**
  * The one mapping from a review role to its OpenCode agent ID. The engine
- * spawns these agents and the policy installer patches them; keeping the IDs
- * here means a rename cannot leave one side pointing at an agent the other
- * never uses.
+ * spawns these agents; the policy installer patches the finder/verifier/sweep
+ * IDs, while the synthesizer keeps its minimal tool-only policy in
+ * review-synth.md. Keeping the IDs here means a rename cannot leave the
+ * engine pointing at a different agent.
  */
 export const AGENT_IDS = {
   finder: "review-finder",
