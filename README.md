@@ -30,6 +30,8 @@ Single source of truth lives here; agent CLIs consume each skill through a symli
 
 - **[contest-refactor](contest-refactor/)** — Autonomous Actor-Critic refactoring loop. Aggressively refactors the workspace to a 9.5+ standard using a strict ICA-grounded architectural rubric (deletion test, two-adapter rule, depth-as-leverage). Invoke via `/contest-refactor`.
 - **[peer-plan-review](peer-plan-review/)** — Sends an implementation plan to another AI agent (Codex, Claude Code, Copilot, opencode, Antigravity `agy`, or Gemini CLI) for iterative review, revises, and re-submits until approval or round limit. Provider adapters, session resume, process-tree timeout kill. Usage: `/peer-plan-review <codex|claude|copilot|opencode|agy|gemini> [model] [effort]`. (`agy` is experimental — not guaranteed read-only; Gemini CLI is EOL 2026-06-18, enterprise-only.)
+- **[screen-audit-capture](screen-audit-capture/)** — Captures comparable app screenshots for a visual-audit ledger: plans the case, device, orientation and appearance matrix, drives simulators, physical devices, iPhone Mirroring and Mac windows, verifies each frame from its pixels, and registers a provenance-complete manifest with the ledger CLI. Reads a project profile; not for scoring (use screen-audit-review).
+- **[screen-audit-review](screen-audit-review/)** — Reviews captured app screens in a visual-audit ledger: writes per-frame findings as tagged notes, 1 to 10 ratings, audit packets and adjudications through the ledger CLI, with auditor tags, same-auditor comparisons, spot-checks, snapshots and append-only corrections. Reads a project profile; not for taking captures (use screen-audit-capture).
 
 ### Experimental (not symlinked by default)
 
@@ -81,6 +83,7 @@ SKILLS=(
   peer-plan-review swift-file-splitting swift-linting
   swiftdata-persistence swiftui-design-tokens swiftui-drag-drop
   swiftui-file-export swiftui-native-ux xctest-ui-testing
+  screen-audit-capture screen-audit-review
 )
 DESTS=(
   "$HOME/.claude/skills"
