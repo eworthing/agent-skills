@@ -60,6 +60,9 @@ Flags (repeatable where noted, run `--help` for the full list):
   `_archive`.
 - `--types 'a|b'` / `--states 'a|b'` — extend the recognized vocab with literal
   ERE alternation fragments appended to the defaults.
+- `--status-only` — for a contract that names docs
+  `<topic>[-YYYY-MM-DD]-<status>.md` with no type token; a recognized final
+  status (with `--states` for the local vocab) is then enough.
 - `--allow NAME` — allowlist an extra basename.
 
 Exit codes: `0` clean, `1` blocking violations found, `2` invocation error.

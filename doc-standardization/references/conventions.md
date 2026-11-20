@@ -80,7 +80,8 @@ Document each exception in the nearest `README.md`. The audit script exempts the
 generic bundle paths `vendor`, `archive`, and `_archive` from filename hygiene
 by default; any other declared bundle is passed at audit time via
 `--bundle-glob '<pattern>'`, and project-local type/status vocab via
-`--types` / `--states` (see the SKILL.md audit step). Links inside every exempt
+`--types` / `--states`, and a type-less `<topic>[-date]-<status>` grammar via
+`--status-only` (see the SKILL.md audit step). Links inside every exempt
 bundle are still validated.
 
 ## Code-to-document alignment

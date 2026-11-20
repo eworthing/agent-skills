@@ -63,6 +63,8 @@ run_case fail-undeclared-custom-bundle 1 'CASE:'
 run_case fail-undeclared-custom-bundle 0 'CLEAN' --bundle-glob '*/legal/*'
 run_case fail-custom-type-vocab 1 'recognized status without approved type'
 run_case fail-custom-type-vocab 0 'CLEAN' --types rfc
+run_case clean-status-only-grammar 1 'recognized status without approved type'
+run_case clean-status-only-grammar 0 'CLEAN' --status-only --states 'reference|open'
 
 # H1-drift precision: full topic phrase, not just the first slug token.
 run_case warn-multiword-h1-drift 0 'H1-DRIFT'

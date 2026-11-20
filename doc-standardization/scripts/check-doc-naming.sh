@@ -19,6 +19,7 @@ states_re='draft|proposed|active|implemented|deprecated'
 DOCS_ROOT="docs"
 extra_bundles=()
 extra_allows=()
+status_only=0
 
 print_usage() {
   cat <<'USAGE'
@@ -35,6 +36,8 @@ Flags:
   --types 'a|b'        Extend the recognized type vocab (a literal ERE
                        alternation fragment, appended to the defaults).
   --states 'a|b'       Extend the recognized status vocab (same form).
+  --status-only        The local contract names docs <topic>[-YYYY-MM-DD]-<status>
+                       with no type token: a recognized final status is enough.
   -h, --help           Show this help and exit.
 USAGE
 }
@@ -53,6 +56,8 @@ while [ $# -gt 0 ]; do
     --states)
       shift; [ $# -gt 0 ] || { printf 'check-doc-naming.sh: --states needs a value\n' >&2; exit 2; }
       states_re="${states_re}|$1" ;;
+    --status-only)
+      status_only=1 ;;
     -h|--help)
       print_usage; exit 0 ;;
     --*)
@@ -98,7 +103,7 @@ is_declared_bundle_path() {
   esac
   for g in "${extra_bundles[@]:-}"; do
     [ -n "$g" ] || continue
-    # shellcheck disable=SC2254 -- $g is an intentional glob pattern.
+    # shellcheck disable=SC2254 # $g is an intentional glob pattern.
     case "$1" in
       $g) return 0 ;;
     esac
@@ -185,6 +190,11 @@ while IFS= read -r f; do
   if is_adr_path "$f"; then continue; fi
   if is_default_name "$base"; then continue; fi
   if is_dated_record_name "$base"; then continue; fi
+
+  if [ "$status_only" -eq 1 ] &&
+    last_slug_token "$base" | grep -Eq "^(${states_re})$"; then
+    continue
+  fi
 
   if has_approved_type_token "$base"; then
     final_token=$(last_slug_token "$base")
