@@ -16,6 +16,7 @@ Name scripts using **lowercase snake_case** with **verb-first** structure.
 | Project-local scripts | **Include** `.sh`/`.py` | `./scripts/run_ui_tests.sh` |
 | PATH-installed tools | **Omit** extension | `/usr/local/bin/deploy_config` |
 | Git hooks | **None** (Git convention) | `pre-commit` |
+| A tool package's own entry points | **Omit** (installed-tool style) | `tools/swiftgate/bin/swiftgate` |
 
 ## Common Verbs
 

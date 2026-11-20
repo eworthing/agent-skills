@@ -13,8 +13,9 @@ In scope:
 - Writing, modifying, and reviewing shell scripts (`*.sh`) intended to run on macOS developer workstations and Linux CI environments.
 - Enforcing Bash 3.2.57 compatibility for `/bin/bash` scripts without requiring POSIX `/bin/sh` degradation.
 - Bridging BSD vs GNU userland divergences (sed, grep, date, stat, find, xargs, base64, readlink/realpath).
-- Portable script architecture: strict mode (`set -euo pipefail`), subshell trap propagation (`set -E`), safe temp file handling (`mktemp`, `trap cleanup EXIT INT TERM`), long option parsing, and dry-run patterns.
+- Portable script architecture: strict mode (`set -euo pipefail`), subshell trap propagation (`set -E`), safe temp file handling (`mktemp`, `trap cleanup EXIT` with INT/TERM traps that exit), timeouts without `timeout` that leave no stray processes, long option parsing, and dry-run patterns.
 - Script naming conventions (lowercase snake_case, verb-first).
+- Deciding when a script's logic should move to Python behind a launcher, and what stays in shell.
 - 3-mode output logging (compact, verbose, raw) for multi-stage automation scripts.
 - Deterministic static validation via `scripts/validate_portability.py`.
 
@@ -44,7 +45,7 @@ Out of scope:
   - Zero Bash 4+ features: no `declare -A`, `mapfile`/`readarray`, `${var,,}`/`${var^^}`, `shopt -s globstar`, `coproc`, `wait -n`, `local -n`, `|&`.
   - Zero unportable GNU flags: use `sed -E` (not `sed -r`), atomic temp-mv instead of unportable `sed -i`, `grep -E` (not `grep -P`), `date -v` or epoch math (not `date -d`), `stat -f` (not `stat -c`), `base64 | tr -d '\n'` (not `base64 -w 0`).
   - Destructive operations gated behind a centralized `run_cmd` dry-run wrapper.
-  - Temporary files created in `$TMPDIR` and cleaned up deterministically via `trap cleanup EXIT INT TERM`.
+  - Temporary files created in `$TMPDIR` and cleaned up deterministically via `trap cleanup EXIT`, with INT and TERM traps that exit (130/143).
   - Script names must use lowercase snake_case with verb-first phrasing (max 4 words).
 
 - Verification Gates:

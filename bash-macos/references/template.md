@@ -74,7 +74,10 @@ require_programs() {
 # --- Temp dir + cleanup ---
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/$(basename "$0" .sh).XXXXXX")"
 cleanup() { rm -rf "$TMP_DIR"; }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+# INT/TERM must exit; a handler that only cleans up lets the script carry on. Exiting fires EXIT, so cleanup runs once.
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # --- Script logic ---
 # Replace this with the actual work.

@@ -41,6 +41,18 @@ if [[ -z "${BASH_VERSINFO:-}" ]] || [[ "${BASH_VERSINFO[0]}" -lt 3 ]]; then
 fi
 ```
 
+## When the Script Should Be Python Instead
+
+Bash is the right tool for a short script that runs commands in order. Move the logic to Python (stdlib only, a launcher script keeping the old path and CLI) when a script needs any of these, because Bash 3.2 makes each one fragile:
+
+- structured data: several parallel arrays standing in for records, or a lookup table (`declare -A` is Bash 4)
+- concurrency it must coordinate: several background jobs with results to collect (no `wait -n` in 3.2, so polling loops), or signal words passed between processes through files
+- parsing JSON, plists or tool output beyond a line or two of `awk`/`sed`, or embedded `python3 -c` heredocs
+- state carried out of subshells (verdicts written to `KEY=VALUE` files because subshell variables are lost)
+- a few hundred lines of logic, or a test harness that must copy scripts into scratch repos and stub binaries just to reach one function
+
+Keep in shell what must run before Python exists (bootstrap and setup), git hooks, and launchers. A launcher sets `set -euo pipefail` and `exec`s the Python entry point with `"$@"`, so callers, docs and muscle memory keep working.
+
 ## BSD vs GNU Userland
 
 macOS provides BSD userland utilities, not GNU coreutils:
@@ -59,11 +71,47 @@ macOS provides BSD userland utilities, not GNU coreutils:
 | `xargs -r` | Omit `-r` | BSD `xargs` skips empty input by default |
 | `sha256sum f` | `shasum -a 256 f` | Checksum: `shasum -a 256` ships on every macOS release and is the portable choice; don't rely on `sha256sum` existing (present on some very recent macOS builds, undocumented, absent on anything older) |
 | `nproc` | `sysctl -n hw.ncpu` | CPU count: `getconf _NPROCESSORS_ONLN` works on both |
-| `timeout 30 cmd` | not present by default | macOS ships no `timeout` at all; `brew install coreutils` for `gtimeout`, or a portable watchdog (`cmd & pid=$!; (sleep 30; kill "$pid") & wait "$pid"`) |
+| `timeout 30 cmd` | not present by default | macOS ships no `timeout` at all; `brew install coreutils` for `gtimeout`, or `run_with_deadline` below. Avoid the one-liner `cmd & pid=$!; (sleep 30; kill "$pid") & wait "$pid"`: its `sleep` outlives the script and later signals a PID that may have been reused |
 | `tac file` | `tail -r file` | Reverse a file's lines |
 | `find . -printf '%p\n'` | not present | BSD `find` lacks `-printf`; use `-exec stat …` or plain `-print` |
 
 Homebrew's `coreutils` installs GNU tools prefixed with `g` (`gsed`, `gdate`, `gstat`, `gtimeout`, ...). A script that can require Homebrew may prefer them over branching: `SED=$(command -v gsed || command -v sed)`.
+
+### Timeouts Without `timeout`
+
+```bash
+# run_with_deadline SECONDS CMD... — CMD's exit code, or 124 (GNU timeout's code) when it ran past SECONDS.
+run_with_deadline() {
+  local secs="$1" pid watcher rc=0 marker
+  shift
+  marker="$(mktemp "${TMPDIR:-/tmp}/deadline.XXXXXX")"
+  rm -f "$marker"
+  "$@" &
+  pid=$!
+  (
+    # TERM from the parent (CMD finished first) must also end the sleep, or it outlives the script.
+    trap 'kill $(jobs -p) 2>/dev/null; exit 0' TERM
+    sleep "$secs" &
+    wait $!
+    # Mark the timeout only if CMD is still running, so a CMD that just finished is not reported as 124.
+    if kill -0 "$pid" 2>/dev/null; then
+      : > "$marker"
+      kill -TERM "$pid" 2>/dev/null || true
+    fi
+  ) </dev/null >/dev/null 2>&1 &
+  watcher=$!
+  wait "$pid" || rc=$?
+  kill "$watcher" 2>/dev/null || true
+  wait "$watcher" 2>/dev/null || true
+  if [[ -e "$marker" ]]; then
+    rm -f "$marker"
+    return 124
+  fi
+  return "$rc"
+}
+```
+
+When CMD is a shell function, `"$@" &` backgrounds a subshell, and TERM reaches only that subshell; signal its children too (`pkill -TERM -P "$pid"`) or run the work in its own process group.
 
 ### Portable `sed` In-Place Editing
 
@@ -169,7 +217,11 @@ Apply the same separation to `declare`, `export`, and `readonly`.
 ```bash
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/$(basename "$0" .sh).XXXXXX")"
 cleanup() { rm -rf "$TMP_DIR"; }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+# INT/TERM must exit: a handler that only cleans up lets the script carry on after Ctrl-C or a kill.
+# Exiting fires the EXIT trap, so cleanup still runs exactly once.
+trap 'exit 130' INT
+trap 'exit 143' TERM
 ```
 
 ### Dry-Run Wrapper & Quoting

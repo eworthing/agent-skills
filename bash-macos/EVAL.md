@@ -53,7 +53,7 @@ Path: /Users/Shared/git/agent-skills/bash-macos
 | 1.3 | Appropriateness | 4/4 | Zero external dependencies; stdlib-only validation tooling. |
 | 2.1 | Fault Tolerance | 4/4 | Strict mode (`set -euo pipefail`), subshell trap propagation (`set -E`), intentional non-zero handling (`grep \|\| true`), and SIGPIPE pipefail mitigations. |
 | 2.2 | Error Reporting | 3/4 | `die`, color helpers (`info`/`warn`/`fail`), stderr usage. No structured/JSON error mode (not applicable for guidance skill). |
-| 2.3 | Recoverability | 4/4 | `TMP_DIR` + `trap cleanup EXIT INT TERM`, atomic sed-via-tmp-mv, and dry-run execution gates. |
+| 2.3 | Recoverability | 4/4 | `TMP_DIR` + `trap cleanup EXIT` with INT/TERM traps that exit, a leak-free `run_with_deadline`, atomic sed-via-tmp-mv, and dry-run execution gates. |
 | 3.1 | Token Cost | 4/4 | `SKILL.md` trimmed from 378 lines to 194 lines. Zero duplication with references; all references flat under `references/` with explicit "Open when..." routing triggers. |
 | 3.2 | Execution Efficiency | 4/4 | `capture_run`, log tail, ANSI strip, and zero-subprocess pure-bash fallbacks where possible. |
 | 4.1 | Learnability | 4/4 | WRONG/CORRECT pairings, verification + naming checklists, code snippets self-contained. |
